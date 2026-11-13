@@ -4,7 +4,7 @@ Mis à jour à chaque itération. Dernière mise à jour : 2026-11-13.
 
 ## Phase en cours
 
-**Phase 0 — Audit et cadrage : livrée, en attente de validation humaine.**
+**Phase 1 — Fondations.** Lot P1-01 livré. Le cadrage de Phase 0 reste à valider formellement (décisions D-02, D-12, D-13).
 
 ## Livré et vérifié
 
@@ -13,19 +13,20 @@ Mis à jour à chaque itération. Dernière mise à jour : 2026-11-13.
 - `apps/api` : préfixe `/api/v1`, configuration validée au démarrage, helmet, CORS par liste blanche, logs JSON avec identifiant de requête et masquage des en-têtes sensibles, filtre d'erreurs global, pipe de validation zod, Prisma (aucun modèle), `health/live` et `health/ready`, OpenAPI sur `/api/docs`.
 - `apps/web` : shell responsive (barre latérale, tiroir mobile), navigation pilotée par une configuration typée, jetons de design, primitives UI, i18n FR/EN, couche d'appel API typée, page « État du système ».
 - Direction visuelle « Salle de contrôle » (modèle A) appliquée au socle web : jetons sombres, polices embarquées, test de contraste (ADR 0006).
+- **P1-01** : deux rôles PostgreSQL (propriétaire pour les migrations, exécution pour l'API, sans DDL ni contournement de la RLS), script d'initialisation rejouable `infra/postgres/db-init.sh`, harnais de tests d'intégration (base `*_test`, migrations appliquées, échec franc si la base est injoignable), schéma Prisma réparti par domaine.
 - Cadrage : `docs/BACKLOG.md` (Phases 1 et 2 détaillées), `docs/DECISIONS-OUVERTES.md` (D-01 à D-13), ADR 0001 à 0006, maquettes dans `docs/maquettes/`.
 
 Preuves du 2026-11-13 (commandes lancées à la racine) :
 
-| Commande                                            | Résultat                                       |
-| --------------------------------------------------- | ---------------------------------------------- |
-| `pnpm build`                                        | OK                                             |
-| `pnpm lint`                                         | OK                                             |
-| `pnpm typecheck`                                    | OK                                             |
-| `pnpm test`                                         | OK — shared 4, API 51, web 70                  |
-| `pnpm test:e2e` (PostgreSQL 16 local)               | OK — 12                                        |
-| `pnpm format:check`                                 | OK                                             |
-| Parcours réel dans un navigateur (web → API → base) | OK en 1280 px et 390 px, aucune erreur console |
+| Commande                                            | Résultat                                        |
+| --------------------------------------------------- | ----------------------------------------------- |
+| `pnpm build`                                        | OK                                              |
+| `pnpm lint`                                         | OK                                              |
+| `pnpm typecheck`                                    | OK                                              |
+| `pnpm test`                                         | OK — shared 4, API 51, web 70                   |
+| `pnpm test:e2e` (PostgreSQL 16 local)               | OK — 27 (santé 12, rôles de base de données 15) |
+| `pnpm format:check`                                 | OK                                              |
+| Parcours réel dans un navigateur (web → API → base) | OK en 1280 px et 390 px, aucune erreur console  |
 
 ## Non vérifié
 
@@ -45,4 +46,4 @@ Validation du cadrage, et en priorité les décisions à trancher **avant la Pha
 
 ## Prochain lot
 
-**P1-01 — Socle base de données : rôles PostgreSQL et harnais de tests d'intégration** (aucune décision bloquante). En parallèle possible : P1-11 (web seul).
+**P1-02 — Tenants et mécanisme d'isolation (application + RLS)** : bloqué par D-02, D-12 et D-13. En attendant, seul P1-11 (design system, web seul) peut avancer.

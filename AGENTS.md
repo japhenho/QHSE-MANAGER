@@ -52,20 +52,24 @@ docs/           Documentation projet, ADR, prompt maître
 - **TypeScript est figé en 6.x.** TS 7 n'expose pas l'API de compilation dont dépendent typescript-eslint, ts-jest et tsup. Ne pas mettre à jour.
 - **L'API est en ESM natif** : imports relatifs avec extension `.js`, `import.meta.dirname` au lieu de `__dirname`, Jest lancé avec `--experimental-vm-modules`, `jest` importé depuis `@jest/globals`.
 - **Prisma 7** : configuration dans `apps/api/prisma.config.ts`, client généré dans `apps/api/src/generated/prisma` (ignoré par Git), adaptateur `@prisma/adapter-pg`. Le `.env` n'est pas chargé automatiquement par Prisma.
+- **Deux rôles PostgreSQL** : l'API se connecte avec le rôle d'exécution (`DATABASE_URL`, sans DDL, soumis à la RLS) ; les migrations avec le rôle propriétaire (`MIGRATION_DATABASE_URL`). Dans les tests : `test/support/db.ts` (`createAppClient`, `createOwnerClient`, `resetDatabase`).
+- **Schéma Prisma réparti** : un fichier par domaine dans `apps/api/prisma/schema/`. Les migrations restent une séquence unique : jamais deux lots parallèles qui en créent sans intégration une par une.
 - `packages/shared` doit être construit avant lint/typecheck/tests des applications (les scripts racine le font).
 - Tailwind 4 se configure en CSS (`apps/web/src/styles/index.css`), pas dans un `tailwind.config.js`.
 - Versions de bibliothèques très récentes : vérifier la documentation actuelle avant d'utiliser une API de mémoire.
 
 ## Commandes (racine)
 
-| Commande                                     | Effet                                                                |
-| -------------------------------------------- | -------------------------------------------------------------------- |
-| `pnpm install`                               | Installe les dépendances.                                            |
-| `pnpm build`                                 | Construit shared, API et web.                                        |
-| `pnpm lint` / `pnpm typecheck` / `pnpm test` | Contrôles sur tout le dépôt (tests unitaires, sans base de données). |
-| `pnpm test:e2e`                              | Tests e2e de l'API ; nécessite `DATABASE_URL` joignable.             |
-| `pnpm format` / `pnpm format:check`          | Prettier.                                                            |
-| `pnpm db:up` / `pnpm db:down`                | PostgreSQL de développement (Docker Compose).                        |
-| `pnpm dev:api` / `pnpm dev:web`              | Serveurs de développement (API : 3000, web : 5173).                  |
-| `pnpm --filter @qhse/api prisma:migrate`     | Crée/applique les migrations en développement.                       |
-| `pnpm --filter @qhse/api prisma:deploy`      | Applique les migrations (CI, production).                            |
+| Commande                                     | Effet                                                                                                          |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `pnpm install`                               | Installe les dépendances.                                                                                      |
+| `pnpm build`                                 | Construit shared, API et web.                                                                                  |
+| `pnpm lint` / `pnpm typecheck` / `pnpm test` | Contrôles sur tout le dépôt (tests unitaires, sans base de données).                                           |
+| `pnpm test:e2e`                              | Tests d'intégration de l'API ; nécessite `TEST_DATABASE_URL` et `TEST_MIGRATION_DATABASE_URL` (base `*_test`). |
+| `pnpm db:init`                               | Crée les rôles propriétaire/exécution et les bases (variables PG* d'un superutilisateur).                      |
+| `pnpm db:migrate`                            | Applique les migrations avec le rôle propriétaire (`MIGRATION_DATABASE_URL`).                                  |
+| `pnpm format` / `pnpm format:check`          | Prettier.                                                                                                      |
+| `pnpm db:up` / `pnpm db:down`                | PostgreSQL de développement (Docker Compose).                                                                  |
+| `pnpm dev:api` / `pnpm dev:web`              | Serveurs de développement (API : 3000, web : 5173).                                                            |
+| `pnpm --filter @qhse/api prisma:migrate`     | Crée/applique les migrations en développement.                                                                 |
+| `pnpm --filter @qhse/api prisma:deploy`      | Applique les migrations (CI, production).                                                                      |

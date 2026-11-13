@@ -14,14 +14,31 @@ Plateforme QHSE intégrée pour les entreprises industrielles onshore et offshor
 ```bash
 pnpm install
 cp .env.example .env        # puis adapter les valeurs ; ne jamais commiter .env
-pnpm db:up                  # PostgreSQL de développement
+pnpm db:up                  # PostgreSQL ; crée les deux rôles et les bases qhse_dev et qhse_test
 pnpm build
-pnpm --filter @qhse/api prisma:migrate
+pnpm db:migrate             # applique les migrations avec le rôle propriétaire
 pnpm dev:api                # http://localhost:3000/api/v1/health/ready — docs : /api/docs
 pnpm dev:web                # http://localhost:5173
 ```
 
 Un seul fichier `.env` à la racine sert à l'API et au web (variables `VITE_*`).
+
+### Base de données : deux rôles
+
+| Rôle                        | Variable                 | Usage                                                                                |
+| --------------------------- | ------------------------ | ------------------------------------------------------------------------------------ |
+| Propriétaire (`qhse_owner`) | `MIGRATION_DATABASE_URL` | Possède le schéma, exécute les migrations. Jamais utilisé par l'API.                 |
+| Exécution (`qhse_app`)      | `DATABASE_URL`           | Utilisé par l'API. Ni superutilisateur, ni propriétaire, sans `BYPASSRLS`, sans DDL. |
+
+Cette séparation est ce qui permet au cloisonnement par ligne (RLS) de s'appliquer réellement à l'API (ADR 0002).
+
+Sans Docker, ou sur un serveur PostgreSQL existant, créer les rôles et les bases avec un superutilisateur :
+
+```bash
+PGHOST=localhost PGPORT=5432 PGUSER=postgres PGPASSWORD=... DB_OWNER_PASSWORD=... DB_APP_PASSWORD=... pnpm db:init
+```
+
+Le script est rejouable. `pnpm --filter @qhse/api prisma:migrate` crée une nouvelle migration en développement.
 
 ## Contrôles
 
@@ -29,9 +46,16 @@ Un seul fichier `.env` à la racine sert à l'API et au web (variables `VITE_*`)
 pnpm lint
 pnpm typecheck
 pnpm test          # tests unitaires, sans base de données
-pnpm test:e2e      # tests e2e de l'API, DATABASE_URL requis
 pnpm format:check
 ```
+
+### Tests d'intégration
+
+```bash
+pnpm test:e2e
+```
+
+Ils lisent `TEST_DATABASE_URL` (rôle d'exécution) et `TEST_MIGRATION_DATABASE_URL` (rôle propriétaire), appliquent les migrations, puis lancent l'API réelle contre PostgreSQL. La base visée doit avoir un nom finissant par `_test` : elle est vidée par les tests. Si la base est injoignable, la commande échoue ; aucun test n'est ignoré.
 
 ## Structure
 

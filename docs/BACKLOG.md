@@ -33,7 +33,7 @@ Chaque lot doit satisfaire, en plus de ses critères propres :
 
 | ID    | Titre                                                             | Dépend de        | Décisions                   | //  | Statut         |
 | ----- | ----------------------------------------------------------------- | ---------------- | --------------------------- | --- | -------------- |
-| P1-01 | Socle base de données : rôles PostgreSQL et harnais d'intégration | Socle Phase 0    | —                           | SEQ | À faire        |
+| P1-01 | Socle base de données : rôles PostgreSQL et harnais d'intégration | Socle Phase 0    | —                           | SEQ | Livré          |
 | P1-02 | Tenants et mécanisme d'isolation (application + RLS)              | P1-01            | D-02, D-12, D-13            | SEQ | Partiel (D-02) |
 | P1-03 | Journal d'audit en ajout seul                                     | P1-02            | D-06 (purge seulement)      | SEQ | À faire        |
 | P1-04 | Authentification : connexion, rafraîchissement, déconnexion       | P1-03            | D-12                        | SEQ | Partiel (D-12) |
@@ -72,12 +72,13 @@ Chaque lot doit satisfaire, en plus de ses critères propres :
   3. Vérifier et consigner : possibilité de répartir le schéma Prisma en plusieurs fichiers par domaine avec la version installée ; à défaut, la règle de fusion séquentielle s'applique.
   4. README : démarrage de la base, application des migrations, lancement des tests d'intégration, avec les commandes réelles.
 - **Critères d'acceptation.**
-  - [ ] Un test d'intégration se connecte avec le rôle d'exécution et vérifie dans le catalogue qu'il n'est ni superutilisateur, ni `BYPASSRLS`, ni propriétaire des tables.
-  - [ ] Le rôle d'exécution ne peut pas exécuter de DDL (test : `CREATE TABLE` refusé).
-  - [ ] Sur une base vierge, la commande de migration documentée aboutit ; relancée, elle ne fait rien.
-  - [ ] La CI exécute les tests d'intégration contre son service PostgreSQL et échoue si la base est inaccessible (pas de test ignoré silencieusement).
-  - [ ] Le résultat du point 3 est écrit dans l'ADR 0001 (section Conséquences).
-  - [ ] CC-5, CC-6.
+  - [x] Un test d'intégration se connecte avec le rôle d'exécution et vérifie dans le catalogue qu'il n'est ni superutilisateur, ni `BYPASSRLS`, ni propriétaire des tables.
+  - [x] Le rôle d'exécution ne peut pas exécuter de DDL (test : `CREATE TABLE` refusé).
+  - [x] Sur une base vierge, la commande de migration documentée aboutit ; relancée, elle ne fait rien.
+  - [x] La CI exécute les tests d'intégration contre son service PostgreSQL et échoue si la base est inaccessible (pas de test ignoré silencieusement).
+  - [x] Le résultat du point 3 est écrit dans l'ADR 0001 (section Conséquences).
+  - [x] CC-5, CC-6.
+- **Livré le 2026-11-13.** Écart : la CI et Docker Compose n'ont pas pu être exécutés dans l'environnement de travail ; le script d'initialisation et les tests ont été validés contre un PostgreSQL 16 local. Aucune migration n'existe encore : « base vierge » a donc été vérifié avec un historique vide.
 
 ### P1-02 — Tenants et mécanisme d'isolation (application + RLS)
 

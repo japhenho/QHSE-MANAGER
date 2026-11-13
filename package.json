@@ -18,7 +18,9 @@
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
     "build:shared": "pnpm --filter @qhse/shared build",
-    "test:e2e": "pnpm build:shared && pnpm --filter @qhse/api run test:e2e"
+    "test:e2e": "pnpm build:shared && pnpm --filter @qhse/api run test:e2e",
+    "db:init": "bash infra/postgres/db-init.sh",
+    "db:migrate": "pnpm --filter @qhse/api run prisma:deploy"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

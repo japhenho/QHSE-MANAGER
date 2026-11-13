@@ -39,6 +39,6 @@ Le dépôt était vide au début de la Phase 0. Le produit doit livrer une API, 
 - **Négatif / à surveiller :**
   - `@qhse/shared` est consommé via son dossier `dist` : il doit être construit avant le typecheck, les tests ou le démarrage des applications qui l'importent. L'ordre est géré par `pnpm -r` (ordre topologique), mais lancer une application seule suppose que `shared` a été construit.
   - `pnpm -r run test` échoue si un paquet n'a pas de script `test` : tout nouveau paquet doit fournir les quatre scripts.
-  - Le schéma Prisma est par défaut un fichier unique : c'est un point de conflit dès que deux lots travaillent en parallèle. La possibilité de le répartir en plusieurs fichiers par domaine avec la version de Prisma installée est **à vérifier dans le lot P1-01** ; à défaut, les lots qui modifient le schéma sont fusionnés un par un.
+  - **Schéma Prisma réparti (vérifié au lot P1-01, Prisma 7.10) :** le schéma est un dossier, `apps/api/prisma/schema/`, avec un fichier par domaine ; `prisma validate` et `prisma generate` ont été exécutés avec deux fichiers. Deux lots parallèles ne se disputent donc plus le même fichier de schéma. Le dossier des migrations reste en revanche une séquence unique : les migrations de lots parallèles sont intégrées une par une, chacune rejouée sur base vierge.
   - L'épinglage de TypeScript devra être levé un jour : dette connue, suivie par cet ADR.
 - **Sans effet sur :** le mode de déploiement (une image API, des fichiers statiques web), décrit ultérieurement.

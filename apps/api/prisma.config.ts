@@ -15,13 +15,16 @@ for (const file of [
 }
 
 export default defineConfig({
-  schema: path.join('prisma', 'schema.prisma'),
+  // A directory: models are split into one file per business domain (ADR 0001).
+  schema: path.join('prisma', 'schema'),
   migrations: {
     path: path.join('prisma', 'migrations'),
   },
   datasource: {
-    // `prisma generate` must work without any database configured, so the URL is
-    // not required here. Migration commands fail with a clear error when it is empty.
-    url: process.env.DATABASE_URL ?? '',
+    // Migrations run with the OWNER role, never with the runtime role of the API
+    // (DATABASE_URL), which has no DDL rights. `prisma generate` must work without any
+    // database configured, so the URL is not required here; migration commands fail
+    // with a clear error when it is empty.
+    url: process.env.MIGRATION_DATABASE_URL ?? '',
   },
 });

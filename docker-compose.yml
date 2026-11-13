@@ -4,15 +4,24 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-qhse}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-dev-only}
-      POSTGRES_DB: ${POSTGRES_DB:-qhse_dev}
+      # Lus par le script d'initialisation (rôles propriétaire et d'exécution, bases).
+      DB_OWNER_USER: ${DB_OWNER_USER:-qhse_owner}
+      DB_OWNER_PASSWORD: ${DB_OWNER_PASSWORD:-change-me-owner-dev-only}
+      DB_APP_USER: ${DB_APP_USER:-qhse_app}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:-change-me-app-dev-only}
+      DB_NAMES: ${DB_NAMES:-qhse_dev qhse_test}
+      DB_OWNER_CREATEDB: ${DB_OWNER_CREATEDB:-true}
     ports:
       - '${POSTGRES_PORT:-5432}:5432'
     volumes:
       - qhse_pgdata:/var/lib/postgresql/data
+      # Exécuté une seule fois, à la création du volume. Pour le rejouer sur une base
+      # existante : `pnpm db:init` avec les variables PG* d'un superutilisateur.
+      - ./infra/postgres/db-init.sh:/docker-entrypoint-initdb.d/10-db-init.sh:ro
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-qhse} -d ${POSTGRES_DB:-qhse_dev}']
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres}']
       interval: 5s
       timeout: 3s
       retries: 10
