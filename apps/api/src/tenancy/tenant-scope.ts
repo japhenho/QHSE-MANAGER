@@ -15,6 +15,8 @@ export interface ScopeRule {
   readonly tenantRelation?: string;
   /** False for models the API may read but never write (the tenant registry). */
   readonly writable: boolean;
+  /** True for journals: rows can be created and read, never changed nor deleted. */
+  readonly appendOnly?: boolean;
 }
 
 /**
@@ -24,6 +26,12 @@ export interface ScopeRule {
 export const TENANT_SCOPE: Readonly<Record<Prisma.ModelName, ScopeRule>> = {
   Tenant: { tenantField: 'id', writable: false },
   User: { tenantField: 'tenantId', tenantRelation: 'tenant', writable: true },
+  AuditEvent: {
+    tenantField: 'tenantId',
+    tenantRelation: 'tenant',
+    writable: true,
+    appendOnly: true,
+  },
 };
 
 export class TenantScopeError extends Error {
@@ -103,6 +111,10 @@ export function scopeArgs(
 
   if (!rule.writable) {
     throw new TenantScopeError(`${model} is read-only through the tenant client (${operation})`);
+  }
+
+  if (rule.appendOnly && !CREATE_OPERATIONS.has(operation)) {
+    throw new TenantScopeError(`${model} is append-only (${operation})`);
   }
 
   if (FILTERED_WRITE_OPERATIONS.has(operation)) {

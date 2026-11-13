@@ -8,6 +8,7 @@ export {
   InvalidTenantContextError,
   MissingTenantContextError,
   requireTenantContext,
+  type RequestOrigin,
   runInTenantContext,
   type TenantContext,
 } from './tenant-context.js';

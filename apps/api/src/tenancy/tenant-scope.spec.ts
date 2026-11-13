@@ -176,7 +176,29 @@ describe('scopeArgs (barrier 1)', () => {
     });
   });
 
+  describe('append-only models', () => {
+    it('can be created and read within the tenant', () => {
+      expect(
+        scopeArgs('AuditEvent', 'create', { data: { id: 'e1', tenantId: TENANT_B } }, TENANT_A),
+      ).toEqual({
+        data: { id: 'e1', tenantId: TENANT_A },
+      });
+      expect(scopeArgs('AuditEvent', 'findMany', {}, TENANT_A)).toEqual({
+        where: { AND: [{ tenantId: TENANT_A }] },
+      });
+    });
+
+    it.each(['update', 'updateMany', 'updateManyAndReturn', 'delete', 'deleteMany', 'upsert'])(
+      'cannot be changed nor deleted (%s)',
+      (operation) => {
+        expect(() =>
+          scopeArgs('AuditEvent', operation, { where: { id: 'e1' }, data: {} }, TENANT_A),
+        ).toThrow(/append-only/);
+      },
+    );
+  });
+
   it('declares a rule for every model', () => {
-    expect(Object.keys(TENANT_SCOPE).sort()).toEqual(['Tenant', 'User']);
+    expect(Object.keys(TENANT_SCOPE).sort()).toEqual(['AuditEvent', 'Tenant', 'User']);
   });
 });

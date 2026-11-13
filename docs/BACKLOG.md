@@ -35,7 +35,7 @@ Chaque lot doit satisfaire, en plus de ses critères propres :
 | ----- | ----------------------------------------------------------------- | ---------------- | --------------------------- | --- | -------------- |
 | P1-01 | Socle base de données : rôles PostgreSQL et harnais d'intégration | Socle Phase 0    | —                           | SEQ | Livré          |
 | P1-02 | Tenants et mécanisme d'isolation (application + RLS)              | P1-01            | D-02, D-12, D-13            | SEQ | Livré          |
-| P1-03 | Journal d'audit en ajout seul                                     | P1-02            | D-06 (purge seulement)      | SEQ | À faire        |
+| P1-03 | Journal d'audit en ajout seul                                     | P1-02            | D-06 (purge seulement)      | SEQ | Livré          |
 | P1-04 | Authentification : connexion, rafraîchissement, déconnexion       | P1-03            | D-12                        | SEQ | Partiel (D-12) |
 | P1-05 | RBAC : rôles, permissions, refus par défaut, harnais de tests     | P1-04            | D-05 (contenu des rôles)    | SEQ | À faire        |
 | P1-06 | Structure organisationnelle : entreprises, sites, départements    | P1-05            | —                           | A   | À faire        |
@@ -108,13 +108,14 @@ Chaque lot doit satisfaire, en plus de ses critères propres :
 - **Dépendances.** P1-02. Décision : D-06 (seulement pour la purge, non développée ici).
 - **Contenu.** Table `audit_events` et module `audit` (ADR 0005) ; écriture dans la transaction métier ; privilèges, politiques RLS `INSERT`/`SELECT` et déclencheur de refus. Lot sans écran ni endpoint : la consultation arrive avec P1-05, quand les permissions existent.
 - **Critères d'acceptation.**
-  - [ ] Avec le rôle d'exécution, `UPDATE`, `DELETE` et `TRUNCATE` sur `audit_events` sont refusés (trois tests).
-  - [ ] Atomicité : si la transaction métier est annulée, aucun événement n'est écrit ; si l'écriture de l'événement échoue, la modification métier est annulée.
-  - [ ] `occurred_at` est fixé par le serveur ; une valeur fournie par l'appelant est ignorée.
-  - [ ] Un événement du tenant A est invisible depuis le contexte du tenant B (isolation au niveau de l'accès aux données).
-  - [ ] Le service refuse d'enregistrer une transition sans statut précédent, nouveau statut et acteur.
-  - [ ] Faisabilité du partitionnement par période vérifiée et consignée dans l'ADR 0005 (mis en place, ou reporté avec la dette écrite).
-  - [ ] CC-5, CC-6.
+  - [x] Avec le rôle d'exécution, `UPDATE`, `DELETE` et `TRUNCATE` sur `audit_events` sont refusés (trois tests).
+  - [x] Atomicité : si la transaction métier est annulée, aucun événement n'est écrit ; si l'écriture de l'événement échoue, la modification métier est annulée.
+  - [x] `occurred_at` est fixé par le serveur ; une valeur fournie par l'appelant est ignorée.
+  - [x] Un événement du tenant A est invisible depuis le contexte du tenant B (isolation au niveau de l'accès aux données).
+  - [x] Le service refuse d'enregistrer une transition sans statut précédent, nouveau statut et acteur.
+  - [x] Faisabilité du partitionnement par période vérifiée et consignée dans l'ADR 0005 (mis en place, ou reporté avec la dette écrite).
+  - [x] CC-5, CC-6.
+- **Livré le 2026-11-13.** Partitionnement vérifié faisable et reporté (dette dans l'ADR 0005). Écart : politique RLS unique au lieu de politiques `INSERT`/`SELECT` (justifié dans l'ADR).
 
 ### P1-04 — Authentification : connexion, rafraîchissement, déconnexion
 

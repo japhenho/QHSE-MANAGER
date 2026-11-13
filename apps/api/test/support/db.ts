@@ -17,10 +17,16 @@ export function createAppClient(): pg.Client {
 }
 
 const MIGRATIONS_TABLE = '_prisma_migrations';
+/** Tables protected by "append-only" triggers, which refuse TRUNCATE even to the owner. */
+const APPEND_ONLY_TABLES = ['audit_events'];
 
 /**
  * Empties every application table (identity sequences included) so that each test
  * starts from a known state. The schema and the migration history are kept.
+ *
+ * Append-only tables can only be emptied by switching their triggers off, which needs
+ * the owner role and a schema-level statement: exactly the limit stated in ADR 0005
+ * (the application cannot do it; a database administrator can). Test databases only.
  */
 export async function resetDatabase(): Promise<void> {
   const owner = createOwnerClient();
@@ -31,8 +37,22 @@ export async function resetDatabase(): Promise<void> {
       [MIGRATIONS_TABLE],
     );
     if (rows.length === 0) return;
+    const existing = new Set(rows.map((row) => row.tablename));
+    const guarded = APPEND_ONLY_TABLES.filter((table) => existing.has(table)).map(
+      (table) => `public.${pg.escapeIdentifier(table)}`,
+    );
     const tables = rows.map((row) => `public.${pg.escapeIdentifier(row.tablename)}`).join(', ');
-    await owner.query(`TRUNCATE TABLE ${tables} RESTART IDENTITY CASCADE`);
+
+    await owner.query('BEGIN');
+    try {
+      for (const table of guarded) await owner.query(`ALTER TABLE ${table} DISABLE TRIGGER USER`);
+      await owner.query(`TRUNCATE TABLE ${tables} RESTART IDENTITY CASCADE`);
+      for (const table of guarded) await owner.query(`ALTER TABLE ${table} ENABLE TRIGGER USER`);
+      await owner.query('COMMIT');
+    } catch (error) {
+      await owner.query('ROLLBACK');
+      throw error;
+    }
   } finally {
     await owner.end();
   }

@@ -1,6 +1,6 @@
 # ADR 0005 — Journal d'audit en ajout seul
 
-- **Statut :** Accepté pour les principes (imposés par le prompt maître, sections 4.3 et 4.4) ; la mise en œuvre est confirmée dans le lot **P1-03**. La purge et l'archivage dépendent de **D-06**.
+- **Statut :** Accepté — mis en œuvre et vérifié par le lot **P1-03** (voir « Résultats du lot P1-03 »). La purge et l'archivage dépendent de **D-06**.
 - **Date :** 2026-11-13.
 
 ## Contexte
@@ -56,6 +56,21 @@ Par ordre de mise en place dans P1-03 :
 
 - Aucune purge tant que D-06 n'est pas tranchée.
 - La table est conçue pour être partitionnée par période, afin qu'un archivage à froid ou une purge réglementaire se fasse par partition, au moyen d'une opération de maintenance hors application exécutée avec un rôle distinct et consignée. Le partitionnement déclaratif n'étant pas décrit nativement par le schéma Prisma, sa mise en œuvre par migration SQL et sa cohabitation avec Prisma sont **à vérifier dans P1-03** ; à défaut, la table reste simple et le partitionnement est reporté, avec la dette consignée.
+
+## Résultats du lot P1-03
+
+Vérifié par `apps/api/test/audit-log.e2e-spec.ts` (PostgreSQL 16, Prisma 7.10).
+
+- **Ajout seul, deux barrières prouvées :** le rôle d'exécution ne détient que `INSERT` et `SELECT` (`UPDATE`, `DELETE`, `TRUNCATE` refusés) ; un déclencheur refuse en plus `UPDATE`, `DELETE` et `TRUNCATE` **y compris au propriétaire de la table**. Les privilèges sont retirés dans la migration à tous les bénéficiaires, sans y écrire de nom de rôle.
+- **Écart par rapport au § 3.2 :** la table garde la politique RLS unique `tenant_isolation` (toutes commandes) commune à toutes les tables à portée tenant, au lieu de politiques limitées à `INSERT` et `SELECT`. Raison : le test de catalogue exige la même politique partout, ce qui empêche d'oublier une table. Les deux barrières ci-dessus couvrent la modification et la suppression.
+- **Heure serveur :** un déclencheur fixe `occurred_at` avec l'horloge de la base à l'insertion ; une valeur fournie est ignorée, y compris en SQL direct. Le service n'accepte aucune date en entrée.
+- **Atomicité :** l'événement s'écrit avec la transaction de l'unité de travail (`AuditService.record(tx, …)`). Prouvé dans les deux sens : transaction métier annulée → aucun événement ; événement refusé (par le service ou par la base) → modification métier annulée.
+- **Acteur :** utilisateur du contexte, ou « système » déclaré explicitement. Aucun événement anonyme. L'acteur est lié par clé étrangère composite : il appartient forcément au même tenant.
+- **Transitions :** statut précédent et nouveau statut obligatoires ensemble (service et contrainte de base). Le caractère obligatoire du motif dépend de la transition : il sera imposé par chaque machine à états.
+- **Métadonnées :** objet JSON de 8 ko au plus ; les clés évoquant un secret (mot de passe, jeton, clé d'API, code MFA…) sont refusées. Ce filtre repose sur les noms de clés : il réduit le risque, il ne remplace pas la revue.
+- **Colonnes reportées :** `client_occurred_at` et `device_id` seront ajoutées en Phase 5 avec la synchronisation hors ligne.
+- **Partitionnement — faisable, reporté.** Essai réalisé sur une copie : table partitionnée par intervalle sur `occurred_at`, clé primaire `(id, occurred_at)`, partition par défaut ; `prisma migrate dev` ne détecte ensuite aucune dérive. Non mis en place maintenant, car la granularité dépend de D-06 et qu'aucun outil ne crée encore les partitions périodiques : tout irait dans la partition par défaut, sans bénéfice. **Dette consignée :** convertir la table (nouvelle table partitionnée, copie, bascule, clé primaire élargie) avant le premier pilote à fort volume, au plus tard en Phase 7.
+- **Limite inchangée :** le propriétaire du schéma peut désactiver les déclencheurs (c'est ce que fait le nettoyage des bases de test). Le journal n'est pas « infalsifiable » vis-à-vis d'un administrateur de la base.
 
 ## Alternatives envisagées
 

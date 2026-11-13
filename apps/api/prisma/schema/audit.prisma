@@ -1,0 +1,39 @@
+// Audit domain: the append-only journal (ADR 0005).
+// Privileges, triggers and Row-Level Security are written in SQL inside the migration.
+
+enum AuditActorType {
+  USER
+  SYSTEM
+
+  @@map("audit_actor_type")
+}
+
+/// One sensitive action or state transition. Rows are never updated nor deleted.
+model AuditEvent {
+  id           String         @id @db.Uuid
+  tenantId     String         @map("tenant_id") @db.Uuid
+  /// Server time, always set by the database (a supplied value is ignored).
+  occurredAt   DateTime       @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  actorType    AuditActorType @map("actor_type")
+  actorUserId  String?        @map("actor_user_id") @db.Uuid
+  /// Stable key, e.g. "incident.status_changed".
+  action       String
+  resourceType String?        @map("resource_type")
+  resourceId   String?        @map("resource_id") @db.Uuid
+  fromStatus   String?        @map("from_status")
+  toStatus     String?        @map("to_status")
+  reason       String?
+  /// Structured complement. Never secrets nor medical data.
+  metadata     Json           @default("{}")
+  requestId    String?        @map("request_id")
+  sessionId    String?        @map("session_id") @db.Uuid
+  ipAddress    String?        @map("ip_address") @db.Inet
+  userAgent    String?        @map("user_agent")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  /// Composite key: the actor is guaranteed to belong to the same tenant as the event.
+  actor  User?  @relation(fields: [tenantId, actorUserId], references: [tenantId, id], onDelete: Restrict)
+
+  @@index([tenantId, occurredAt(sort: Desc)])
+  @@map("audit_events")
+}
