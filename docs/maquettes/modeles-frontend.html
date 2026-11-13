@@ -1,0 +1,428 @@
+<title>QHSE Manager — Modèles d'interface</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a quiet comparison page; three self-contained application frames, one shown at a time. */
+:root{
+  --bg:#eef1f4; --fg:#16212c; --muted:#56677a; --line:#cfd7df; --surface:#ffffff; --accent:#0f5c8a; --accent-fg:#ffffff;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Barlow","Segoe UI",system-ui,sans-serif;
+  --f-data:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0f151b;--fg:#e7edf3;--muted:#9aabbb;--line:#2a3846;--surface:#18222c;--accent:#5fb6e6;--accent-fg:#08131b;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f151b;--fg:#e7edf3;--muted:#9aabbb;--line:#2a3846;--surface:#18222c;--accent:#5fb6e6;--accent-fg:#08131b;color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.5}
+.page{max-width:1240px;margin:0 auto;padding-block:28px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:22px}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(2rem,5vw,2.9rem);line-height:1.05;margin:0;text-wrap:balance;letter-spacing:.01em}
+.lede{color:var(--muted);max-width:68ch;margin:6px 0 0}
+.tabs{display:flex;flex-wrap:wrap;gap:8px}
+.tab{font:600 1rem var(--f-body);padding:12px 18px;min-height:48px;border:2px solid var(--line);background:var(--surface);color:var(--fg);border-radius:6px;cursor:pointer;display:flex;gap:10px;align-items:center}
+.tab b{font-family:var(--f-display);font-size:1.25rem;line-height:1}
+.tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.brief{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:6px 28px;margin:0;padding:0;list-style:none;color:var(--muted);font-size:.95rem}
+.brief strong{color:var(--fg);display:block}
+.model{display:flex;flex-direction:column;gap:16px}
+.model h2{font-family:var(--f-display);font-size:1.7rem;margin:0;line-height:1.1}
+.note{font-size:.85rem;color:var(--muted);margin:0}
+.frame{border-radius:10px;overflow:hidden;border:1px solid var(--line);min-width:0}
+.demo{font:500 .7rem var(--f-data);letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:3px;border:1px solid currentColor;white-space:nowrap}
+.num{font-family:var(--f-data);font-variant-numeric:tabular-nums}
+
+/* ---------- shared 3D kit ---------- */
+.scene{position:relative;perspective:1100px;overflow:hidden;touch-action:pan-y;cursor:grab;user-select:none}
+.scene:active{cursor:grabbing}
+.world{position:absolute;left:50%;top:50%;width:360px;height:360px;margin:-180px 0 0 -180px;transform-style:preserve-3d;scale:var(--s,1);transform:translateY(var(--ty,10px)) rotateX(var(--rx,58deg)) rotateZ(var(--rz,-35deg))}
+.bx,.bx i,.pin{position:absolute;transform-style:preserve-3d}
+.bx i{display:block;transform-origin:0 0;border:1px solid var(--edge)}
+.bx .ft{background:var(--top)} .bx .ff{background:var(--front)} .bx .fs{background:var(--side)}
+.pin{transform:translateZ(var(--z)) rotateZ(calc(var(--rz,-35deg)*-1)) rotateX(calc(var(--rx,58deg)*-1)) translate(-50%,-100%);white-space:nowrap}
+.hint{position:absolute;right:10px;bottom:8px;font:500 .7rem var(--f-data);opacity:.7;pointer-events:none}
+@media (max-width:560px){.world{--s:.7}}
+
+/* ---------- Model A — control room ---------- */
+.mA{--a-bg:#0c1722;--a-panel:#132332;--a-line:#254057;--a-fg:#e4edf5;--a-mu:#8ea5b9;--a-ac:#46c2cf;--ok:#49c98a;--warn:#f0b23e;--bad:#ef6060;
+  background:var(--a-bg);color:var(--a-fg);display:grid;grid-template-columns:64px minmax(0,1fr)}
+.mA .rail{background:#09121b;border-right:1px solid var(--a-line);display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 0}
+.mA .rail span{width:44px;height:44px;border-radius:6px;display:grid;place-items:center;font:600 .72rem var(--f-data);color:var(--a-mu)}
+.mA .rail .on{background:var(--a-panel);color:var(--a-ac);box-shadow:inset 3px 0 0 var(--a-ac)}
+.mA .main{display:flex;flex-direction:column;min-width:0}
+.mA .bar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--a-line)}
+.mA .bar h3{font:700 1.35rem var(--f-display);margin:0;letter-spacing:.03em;text-transform:uppercase}
+.mA .bar .sp{flex:1}
+.mA .live{display:flex;align-items:center;gap:7px;font:500 .78rem var(--f-data);color:var(--a-mu)}
+.mA .live::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px #49c98a33}
+.mA .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border-bottom:1px solid var(--a-line)}
+.mA .kpi{padding:14px 18px;border-right:1px solid var(--a-line);min-width:0}
+.mA .kpi small{display:block;color:var(--a-mu);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase}
+.mA .kpi .num{font-size:1.9rem;font-weight:500;line-height:1.2}
+.mA .kpi em{font-style:normal;font-size:.8rem}
+.mA .body{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr)}
+.mA .scene{height:440px;background:radial-gradient(ellipse at 50% 60%,#18334a 0,#0c1722 70%);border-right:1px solid var(--a-line)}
+.mA .world{--ty:-14px}
+.mA .ground{position:absolute;inset:-40px;background:linear-gradient(#2b4a6355 1px,transparent 1px) 0 0/40px 40px,linear-gradient(90deg,#2b4a6355 1px,transparent 1px) 0 0/40px 40px,#10202e;border:1px solid var(--a-line)}
+.mA .bx{--edge:#0a141d}
+.mA .steel{--top:#5d7e98;--front:#3e5a71;--side:#2c4357}
+.mA .tank{--top:#9fb4c4;--front:#71899b;--side:#526878}
+.mA .live-q{--top:#4f8f97;--front:#346a72;--side:#254f56}
+.mA .deck{--top:#2f8b6a;--front:#1f6149;--side:#174a38}
+.mA .pier{--top:#7b6a4d;--front:#5a4d38;--side:#42392a}
+.mA .flare{--top:#f0b23e;--front:#8a8f95;--side:#63686d}
+.mA .hot.steel{--top:#c98f2c;--front:#95691f;--side:#6d4d17}
+.mA .tag{font:600 .72rem var(--f-data);padding:4px 8px;border-radius:3px;background:#0a141dee;color:var(--a-fg);border:1px solid var(--c);box-shadow:0 0 14px -2px var(--c)}
+.mA .tag::after{content:"";position:absolute;left:50%;top:100%;width:1px;height:22px;background:var(--c)}
+.mA .pin{padding-bottom:22px}
+.mA .side{display:flex;flex-direction:column;min-width:0}
+.mA .blk{padding:14px 18px;border-bottom:1px solid var(--a-line)}
+.mA .blk h4{font:600 .78rem var(--f-body);letter-spacing:.1em;text-transform:uppercase;color:var(--a-mu);margin:0 0 10px}
+.mA ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.mA li{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:10px;align-items:center;font-size:.92rem}
+.mA li i{width:10px;height:10px;border-radius:2px;background:var(--c)}
+.mA li span{min-width:0;overflow-wrap:anywhere}
+.mA li small{color:var(--a-mu);font-family:var(--f-data);font-size:.75rem}
+.mA .pob{display:flex;align-items:baseline;gap:10px}
+.mA .pob .num{font-size:2.2rem;color:var(--a-ac)}
+@media (max-width:820px){.mA{grid-template-columns:minmax(0,1fr)}.mA .rail{display:none}.mA .body{grid-template-columns:minmax(0,1fr)}.mA .scene{height:340px;border-right:0;border-bottom:1px solid var(--a-line)}}
+
+/* ---------- Model B — register ---------- */
+.mB{--b-bg:#f2f4f7;--b-sf:#ffffff;--b-fg:#17212b;--b-mu:#5a6877;--b-line:#d8dee5;--b-ac:#1b4f8f;--b-ac2:#e8eff8;
+  background:var(--b-bg);color:var(--b-fg);display:grid;grid-template-columns:220px minmax(0,1fr)}
+.mB nav{background:var(--b-sf);border-right:1px solid var(--b-line);padding:18px 12px;display:flex;flex-direction:column;gap:2px}
+.mB nav strong{font:700 1.3rem var(--f-display);padding:0 10px 14px;color:var(--b-ac)}
+.mB nav a{padding:9px 10px;border-radius:5px;color:var(--b-fg);font-size:.95rem;text-decoration:none}
+.mB nav a.on{background:var(--b-ac2);color:var(--b-ac);font-weight:600}
+.mB nav small{padding:14px 10px 4px;color:var(--b-mu);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase}
+.mB .main{padding:18px 22px 24px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.mB .top{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.mB .top h3{font:700 1.6rem var(--f-display);margin:0;flex:1;min-width:200px}
+.mB .btn{font:600 .9rem var(--f-body);padding:10px 16px;border-radius:5px;border:1px solid var(--b-ac);background:var(--b-ac);color:#fff}
+.mB .btn.gh{background:var(--b-sf);color:var(--b-ac)}
+.mB .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.mB .card{background:var(--b-sf);border:1px solid var(--b-line);border-radius:8px;padding:14px 16px;min-width:0}
+.mB .card small{color:var(--b-mu);font-size:.8rem;display:block}
+.mB .card>.num{font-size:1.7rem;font-weight:500}
+.mB td.num{font-size:.82rem;white-space:nowrap}
+.mB .card em{font-style:normal;font-size:.78rem;color:var(--b-mu)}
+.mB .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:12px}
+.mB h4{font:600 1rem var(--f-body);margin:0 0 4px}
+.mB .sub{color:var(--b-mu);font-size:.82rem;margin:0 0 8px}
+.mB .scene{height:330px;background:linear-gradient(#f7f9fb,#e9eef3);border-radius:6px;border:1px solid var(--b-line);color:var(--b-mu)}
+.mB .world{--s:.8;--rx:60deg;--rz:-42deg;--ty:34px;width:250px;height:250px;margin:-125px 0 0 -125px}
+.mB .bx{--edge:#ffffff99}
+.mB .r1{--top:#7cc58f;--front:#5aa66f;--side:#458558}
+.mB .r2{--top:#f2d259;--front:#d4b33d;--side:#aa8f2f}
+.mB .r3{--top:#f0a24a;--front:#d18431;--side:#a76826}
+.mB .r4{--top:#e2615c;--front:#c04540;--side:#983531}
+.mB .tag{font:500 .7rem var(--f-data);color:var(--b-fg);background:#ffffffd9;border:1px solid var(--b-line);border-radius:3px;padding:2px 6px}
+.mB .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8rem;color:var(--b-mu);margin-top:8px}
+.mB .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px}
+.mB .tw{overflow-x:auto}
+.mB table{width:100%;border-collapse:collapse;font-size:.9rem;min-width:420px}
+.mB th{text-align:left;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--b-mu);padding:8px 8px;border-bottom:1px solid var(--b-line)}
+.mB td{padding:10px 8px;border-bottom:1px solid var(--b-line);vertical-align:top}
+.mB .st{font-size:.75rem;font-weight:600;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.mB .st.late{background:#fbe4e3;color:#9a2b27}.mB .st.run{background:#e8eff8;color:#1b4f8f}.mB .st.ver{background:#fdf1cf;color:#7a5b00}
+.mB .bars{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px;align-items:end;height:130px;border-bottom:1px solid var(--b-line)}
+.mB .bars div{background:var(--b-ac);border-radius:3px 3px 0 0;position:relative;height:calc(var(--v)*14px)}
+.mB .bars div::before{content:attr(data-v);position:absolute;bottom:100%;left:0;right:0;text-align:center;font:500 .7rem var(--f-data);color:var(--b-mu)}
+.mB .months{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px;font:500 .68rem var(--f-data);color:var(--b-mu);text-align:center;padding-top:4px}
+@media (max-width:860px){.mB{grid-template-columns:minmax(0,1fr)}.mB nav{flex-direction:row;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--b-line);padding:10px 12px}.mB nav strong{padding:6px 10px;width:100%}.mB nav small{display:none}.mB .cols{grid-template-columns:minmax(0,1fr)}.mB .main{padding:16px}}
+
+@media (max-width:560px){.mB .world{--s:.62}}
+
+/* ---------- Model C — field ---------- */
+.mC{--c-bg:#e6eaee;--c-ink:#141a1f;--c-mu:#4d5a66;--c-sf:#ffffff;--c-y:#ffc61a;--c-line:#c3ccd4;--c-ok:#17794a;--c-bad:#b3261e;
+  background:var(--c-bg);color:var(--c-ink);display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:24px;padding:24px;align-items:start}
+.mC .stage{perspective:1200px;display:grid;place-items:center;padding:20px 0}
+.mC .phone{width:270px;border-radius:30px;background:var(--c-ink);padding:10px;transform-style:preserve-3d;transform:rotateY(var(--py,-20deg)) rotateX(var(--px,8deg));transition:transform .15s ease-out;
+  box-shadow:1px 1px 0 #2b343c,2px 2px 0 #2b343c,3px 3px 0 #2b343c,4px 4px 0 #2b343c,5px 5px 0 #2b343c,6px 6px 0 #2b343c,7px 7px 0 #2b343c,8px 8px 0 #2b343c,26px 34px 40px #141a1f55}
+.mC .screen{border-radius:22px;overflow:hidden;background:var(--c-bg);display:flex;flex-direction:column}
+.mC .hd{background:var(--c-y);padding:14px 14px 12px}
+.mC .hd b{font:700 1.3rem var(--f-display);display:block;line-height:1.1}
+.mC .sync{display:inline-flex;gap:6px;align-items:center;font:500 .68rem var(--f-data);margin-top:6px;background:var(--c-ink);color:#fff;padding:3px 8px;border-radius:99px}
+.mC .sync::before{content:"";width:7px;height:7px;border-radius:50%;background:#5fdc9c}
+.mC .big{margin:12px;padding:16px;border-radius:10px;background:var(--c-bad);color:#fff;font:700 1.2rem var(--f-display);text-align:center;letter-spacing:.03em}
+.mC .tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 12px 12px}
+.mC .tiles div{background:var(--c-sf);border:2px solid var(--c-ink);border-radius:10px;padding:12px 10px;min-height:66px;font-weight:600;font-size:.9rem;line-height:1.2;display:flex;flex-direction:column;justify-content:space-between}
+.mC .tiles small{font:500 .68rem var(--f-data);color:var(--c-mu)}
+.mC .queue{margin:0 12px 12px;padding:8px 10px;border-radius:8px;border:2px dashed var(--c-ink);font-size:.8rem;font-weight:600}
+.mC .tabbar{display:grid;grid-template-columns:repeat(4,1fr);background:var(--c-ink);color:#b9c4cd;font-size:.68rem;text-align:center;padding:9px 0 12px}
+.mC .tabbar .on{color:var(--c-y);font-weight:700}
+.mC .right{display:flex;flex-direction:column;gap:16px;min-width:0}
+.mC .panel{background:var(--c-sf);border:2px solid var(--c-ink);border-radius:10px;padding:16px;min-width:0}
+.mC h4{font:700 1.3rem var(--f-display);margin:0 0 2px}
+.mC .sub{color:var(--c-mu);font-size:.85rem;margin:0 0 6px}
+.mC .pyr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center}
+.mC .scene{height:270px}
+.mC .world{--rx:66deg;--ty:44px;width:200px;height:200px;margin:-100px 0 0 -100px}
+.mC .bx{--edge:#141a1f}
+.mC .l1{--top:#b3261e;--front:#8f1e18;--side:#701712}
+.mC .l2{--top:#e0662a;--front:#b85120;--side:#8f3f19}
+.mC .l3{--top:#ffc61a;--front:#d6a50f;--side:#a8820c}
+.mC .l4{--top:#7fb5d6;--front:#5f93b3;--side:#4a748e}
+.mC .l5{--top:#9fb0bd;--front:#7c8d9a;--side:#606e79}
+.mC .lv{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:.9rem}
+.mC .lv li{display:grid;grid-template-columns:14px minmax(0,1fr) auto;gap:8px;align-items:center}
+.mC .lv i{width:14px;height:14px;border:2px solid var(--c-ink);border-radius:2px}
+.mC .task{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:14px 0;border-top:2px solid var(--c-line);min-height:56px}
+.mC .task b{display:block}.mC .task small{color:var(--c-mu)}
+.mC .chip{font-size:.75rem;font-weight:700;padding:4px 10px;border-radius:99px;border:2px solid var(--c-ink);white-space:nowrap}
+.mC .chip.y{background:var(--c-y)}
+@media (max-width:820px){.mC{grid-template-columns:minmax(0,1fr);padding:16px}.mC .pyr{grid-template-columns:minmax(0,1fr)}}
+@media (prefers-reduced-motion:reduce){.mC .phone{transition:none}}
+</style>
+
+<div class="page">
+  <header>
+    <h1>Trois directions d'interface pour QHSE Manager</h1>
+    <p class="lede">Chaque modèle reprend les conventions des suites QHSE et EHS du marché, avec un élément 3D que vous pouvez faire pivoter à la souris ou au doigt. Tous les chiffres sont des exemples.</p>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Modèles">
+    <button class="tab" role="tab" id="tab-a" data-m="modele-a" aria-controls="modele-a"><b>A</b> Salle de contrôle</button>
+    <button class="tab" role="tab" id="tab-b" data-m="modele-b" aria-controls="modele-b"><b>B</b> Registre</button>
+    <button class="tab" role="tab" id="tab-c" data-m="modele-c" aria-controls="modele-c"><b>C</b> Terrain</button>
+  </div>
+
+  <!-- ================= A ================= -->
+  <section class="model" id="modele-a" role="tabpanel" aria-labelledby="tab-a">
+    <h2>A — Salle de contrôle</h2>
+    <ul class="brief">
+      <li><strong>Pour qui</strong>Superviseurs HSE, OIM, salle de contrôle, écrans muraux.</li>
+      <li><strong>Idée</strong>Le site est l'écran d'accueil : on voit où sont les permis, les incidents et le personnel.</li>
+      <li><strong>3D</strong>Maquette du site avec repères en direct.</li>
+    </ul>
+    <div class="frame mA">
+      <div class="rail" aria-hidden="true"><span class="on">SITE</span><span>PTW</span><span>INC</span><span>RSQ</span><span>INSP</span><span>CAPA</span><span>POB</span></div>
+      <div class="main">
+        <div class="bar"><h3>Terminal de Djeno · Vue du site</h3><span class="demo">Données d'exemple</span><span class="sp"></span><span class="live">Synchronisé 14:32</span></div>
+        <div class="kpis">
+          <div class="kpi"><small>Jours sans arrêt</small><span class="num">127</span></div>
+          <div class="kpi"><small>Permis actifs</small><span class="num">9</span> <em style="color:var(--warn)">2 à chaud</em></div>
+          <div class="kpi"><small>Incidents ouverts</small><span class="num">3</span> <em style="color:var(--bad)">1 grave</em></div>
+          <div class="kpi"><small>CAPA en retard</small><span class="num">6</span></div>
+          <div class="kpi"><small>TRIR 12 mois</small><span class="num">0,42</span></div>
+        </div>
+        <div class="body">
+          <div class="scene" id="sceneA" aria-label="Maquette 3D du site avec permis, incident et inspection localisés"><div class="world" id="worldA"><div class="ground"></div></div><span class="hint">Glisser pour pivoter</span></div>
+          <div class="side">
+            <div class="blk"><h4>Sur le site maintenant</h4>
+              <ul>
+                <li style="--c:var(--warn)"><i></i><span>PTW-0142 · Travail à chaud, unité de traitement</span><small>expire 17:00</small></li>
+                <li style="--c:var(--bad)"><i></i><span>INC-0031 · Chute d'objet, atelier</span><small>enquête</small></li>
+                <li style="--c:var(--a-ac)"><i></i><span>INSP-0210 · Bacs de stockage</span><small>62 %</small></li>
+                <li style="--c:var(--ok)"><i></i><span>Hélipont · Rotation 15:10</span><small>prêt</small></li>
+              </ul>
+            </div>
+            <div class="blk"><h4>Personnel à bord</h4>
+              <div class="pob"><span class="num">48</span><span>sur 60 places · 3 visiteurs · 12 sous-traitants</span></div>
+            </div>
+            <div class="blk"><h4>À approuver par vous</h4>
+              <ul>
+                <li style="--c:var(--a-mu)"><i></i><span>PTW-0145 · Espace confiné, bac T-02</span><small>soumis 13:50</small></li>
+                <li style="--c:var(--a-mu)"><i></i><span>CAPA-0088 · Vérification d'efficacité</span><small>échéance 2 j</small></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= B ================= -->
+  <section class="model" id="modele-b" role="tabpanel" aria-labelledby="tab-b" hidden>
+    <h2>B — Registre</h2>
+    <ul class="brief">
+      <li><strong>Pour qui</strong>Responsables QHSE, direction, auditeurs, usage bureau.</li>
+      <li><strong>Idée</strong>Interface claire de type suite de gestion : menu latéral, indicateurs, tableaux filtrables.</li>
+      <li><strong>3D</strong>Matrice des risques en relief : la hauteur montre le nombre de risques par case.</li>
+    </ul>
+    <div class="frame mB">
+      <nav aria-label="Modules (maquette)">
+        <strong>QHSE Manager</strong>
+        <a class="on" href="#modele-b">Tableau de bord</a><a href="#modele-b">Incidents</a><a href="#modele-b">Risques</a><a href="#modele-b">Inspections</a><a href="#modele-b">Actions CAPA</a>
+        <small>Opérations</small><a href="#modele-b">Permis de travail</a><a href="#modele-b">Audits</a><a href="#modele-b">Documents</a>
+      </nav>
+      <div class="main">
+        <div class="top"><h3>Tableau de bord QHSE</h3><span class="demo">Données d'exemple</span><span class="btn gh">Exporter</span><span class="btn">Déclarer un incident</span></div>
+        <div class="cards">
+          <div class="card"><small>TRIR · 12 mois glissants</small><span class="num">0,42</span><br><em>par 200 000 h · définition v1</em></div>
+          <div class="card"><small>Presque-accidents déclarés</small><span class="num">34</span><br><em>ce trimestre · indicateur avancé</em></div>
+          <div class="card"><small>Inspections réalisées</small><span class="num">92 %</span><br><em>46 sur 50 planifiées</em></div>
+          <div class="card"><small>CAPA clôturées à temps</small><span class="num">81 %</span><br><em>6 en retard</em></div>
+        </div>
+        <div class="cols">
+          <div class="card">
+            <h4>Matrice des risques</h4><p class="sub">Risques résiduels par gravité et probabilité · 61 risques · coin vert : gravité 1, probabilité 1</p>
+            <div class="scene" id="sceneB" aria-label="Matrice des risques 5 par 5 en 3D"><div class="world" id="worldB"></div><span class="hint">Glisser pour pivoter</span></div>
+            <div class="legend"><span><i style="background:#7cc58f"></i>Faible</span><span><i style="background:#f2d259"></i>Modéré</span><span><i style="background:#f0a24a"></i>Élevé</span><span><i style="background:#e2615c"></i>Critique</span></div>
+          </div>
+          <div class="card">
+            <h4>Actions à traiter</h4><p class="sub">Triées par échéance</p>
+            <div class="tw"><table>
+              <thead><tr><th>Réf.</th><th>Action</th><th>Responsable</th><th>État</th></tr></thead>
+              <tbody>
+                <tr><td class="num">CAPA-0071</td><td>Remplacer les élingues du pont roulant</td><td>Maintenance</td><td><span class="st late">Retard 9 j</span></td></tr>
+                <tr><td class="num">CAPA-0079</td><td>Réviser la procédure de consignation</td><td>HSE site</td><td><span class="st late">Retard 2 j</span></td></tr>
+                <tr><td class="num">CAPA-0088</td><td>Garde-corps passerelle bac T-02</td><td>Travaux neufs</td><td><span class="st ver">À vérifier</span></td></tr>
+                <tr><td class="num">CAPA-0091</td><td>Formation travail en hauteur, équipe B</td><td>RH</td><td><span class="st run">En cours</span></td></tr>
+              </tbody>
+            </table></div>
+            <h4 style="margin-top:18px">Incidents déclarés par mois</h4><p class="sub">12 derniers mois, tous types</p>
+            <div class="bars" id="barsB"></div><div class="months" id="monthsB"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= C ================= -->
+  <section class="model" id="modele-c" role="tabpanel" aria-labelledby="tab-c" hidden>
+    <h2>C — Terrain</h2>
+    <ul class="brief">
+      <li><strong>Pour qui</strong>Opérateurs, chefs d'équipe, sous-traitants, sur téléphone ou tablette.</li>
+      <li><strong>Idée</strong>Gros boutons, fort contraste, état de synchronisation toujours visible. Le bureau reprend le même langage.</li>
+      <li><strong>3D</strong>Pyramide de sécurité qui tourne, et aperçu du mobile en perspective.</li>
+    </ul>
+    <div class="frame mC">
+      <div class="stage" id="stageC">
+        <div class="phone" id="phoneC" aria-label="Aperçu de l'application mobile">
+          <div class="screen">
+            <div class="hd"><b>Équipe de jour · Zone bacs</b><span class="sync">Synchronisé il y a 4 min</span></div>
+            <div class="big">DÉCLARER UN INCIDENT</div>
+            <div class="tiles">
+              <div>Observation<small>30 s</small></div><div>Inspection<small>2 à faire</small></div>
+              <div>Mes permis<small>1 actif</small></div><div>Scanner un QR<small>équipement</small></div>
+            </div>
+            <div class="queue">3 saisies en attente d'envoi</div>
+            <div class="tabbar"><span class="on">Accueil</span><span>Tâches</span><span>Permis</span><span>Profil</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="right">
+        <div class="panel">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><h4 style="flex:1;min-width:180px">Pyramide de sécurité · 30 jours</h4><span class="demo">Données d'exemple</span></div>
+          <p class="sub">Plus la base est large, plus le site remonte de signaux faibles.</p>
+          <div class="pyr">
+            <div class="scene" id="sceneC" aria-label="Pyramide de sécurité en 3D"><div class="world" id="worldC"></div></div>
+            <ul class="lv">
+              <li><i style="background:#b3261e"></i>Accident avec arrêt<span class="num">0</span></li>
+              <li><i style="background:#e0662a"></i>Accident sans arrêt<span class="num">1</span></li>
+              <li><i style="background:#ffc61a"></i>Premiers soins<span class="num">4</span></li>
+              <li><i style="background:#7fb5d6"></i>Presque-accidents<span class="num">17</span></li>
+              <li><i style="background:#9fb0bd"></i>Observations<span class="num">112</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="panel">
+          <h4>Mes tâches du jour</h4>
+          <div class="task"><div><b>Inspection hebdomadaire, bac T-02</b><small>Checklist de 24 points · avant 16:00</small></div><span class="chip y">À faire</span></div>
+          <div class="task"><div><b>Causerie sécurité : travail en hauteur</b><small>Équipe B · 12 personnes</small></div><span class="chip">07:30 fait</span></div>
+          <div class="task"><div><b>PTW-0142 : contrôle gaz</b><small>Toutes les 2 h · prochain 15:00</small></div><span class="chip y">Dans 28 min</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p class="note">Maquettes statiques : les menus et boutons à l'intérieur des cadres ne sont pas actifs. Noms de site, références et valeurs sont inventés pour l'illustration.</p>
+</div>
+
+<script>
+(function(){
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function el(cls){var d=document.createElement('div');d.className=cls;return d;}
+  // A cuboid standing on the ground plane (x,y = footprint, h = height along Z).
+  function box(world,o){
+    var b=el('bx '+(o.cls||''));
+    b.style.cssText='left:'+o.x+'px;top:'+o.y+'px;width:'+o.w+'px;height:'+o.d+'px;transform:translateZ('+(o.z||0)+'px)';
+    function f(c,css){var i=document.createElement('i');i.className=c;i.style.cssText=css;b.appendChild(i);}
+    f('ff','width:'+o.w+'px;height:'+o.h+'px;top:0;transform:rotateX(90deg)');
+    f('fs','width:'+o.h+'px;height:'+o.d+'px;left:0;transform:rotateY(-90deg)');
+    f('fs','width:'+o.h+'px;height:'+o.d+'px;left:'+o.w+'px;transform:rotateY(-90deg)');
+    f('ff','width:'+o.w+'px;height:'+o.h+'px;top:'+o.d+'px;transform:rotateX(90deg)');
+    f('ft','width:'+o.w+'px;height:'+o.d+'px;transform:translateZ('+o.h+'px)');
+    world.appendChild(b);return b;
+  }
+  function pin(world,x,y,z,html,color){
+    var p=el('pin');p.style.cssText='left:'+x+'px;top:'+y+'px;--z:'+z+'px;--c:'+color;
+    p.innerHTML='<span class="tag">'+html+'</span>';world.appendChild(p);
+  }
+  // Drag to rotate; optional idle motion (sway or spin).
+  function spin(scene,world,rz,mode){
+    var base=rz,off=0,drag=false,last=0,t0=performance.now();
+    function set(v){world.style.setProperty('--rz',v.toFixed(2)+'deg');}
+    set(base);
+    scene.addEventListener('pointerdown',function(e){drag=true;last=e.clientX;scene.setPointerCapture(e.pointerId);});
+    scene.addEventListener('pointermove',function(e){if(!drag)return;base-=(e.clientX-last)*0.45;last=e.clientX;set(base+off);});
+    function end(){drag=false;}
+    scene.addEventListener('pointerup',end);scene.addEventListener('pointercancel',end);
+    if(reduce||!mode)return;
+    (function tick(now){
+      if(!drag && scene.offsetParent){
+        if(mode==='sway'){off=Math.sin((now-t0)/2600)*7;set(base+off);}
+        else{base-=0.18;set(base);}
+      }
+      requestAnimationFrame(tick);
+    })(t0);
+  }
+
+  // --- A: site model ---
+  var wa=document.getElementById('worldA');
+  box(wa,{x:30,y:40,w:130,d:90,h:46,cls:'steel hot'});
+  box(wa,{x:50,y:60,w:40,d:40,h:30,z:46,cls:'steel'});
+  box(wa,{x:205,y:36,w:54,d:54,h:72,cls:'tank'});
+  box(wa,{x:272,y:36,w:54,d:54,h:72,cls:'tank'});
+  box(wa,{x:205,y:104,w:54,d:54,h:56,cls:'tank'});
+  box(wa,{x:30,y:176,w:96,d:70,h:40,cls:'live-q'});
+  box(wa,{x:156,y:190,w:84,d:60,h:28,cls:'steel'});
+  box(wa,{x:268,y:206,w:72,d:72,h:8,cls:'deck'});
+  box(wa,{x:140,y:300,w:200,d:24,h:6,cls:'pier'});
+  box(wa,{x:318,y:132,w:10,d:10,h:124,cls:'flare'});
+  pin(wa,95,85,80,'PTW-0142 · à chaud','#f0b23e');
+  pin(wa,198,220,32,'INC-0031','#ef6060');
+  pin(wa,266,63,76,'INSP-0210','#46c2cf');
+  pin(wa,78,211,44,'POB 48','#49c98a');
+  spin(document.getElementById('sceneA'),wa,-35,'sway');
+
+  // --- B: risk matrix (rows = likelihood 1..5, cols = severity 1..5) ---
+  var wb=document.getElementById('worldB'),cell=50;
+  var counts=[[6,4,2,1,0],[5,6,3,1,1],[3,5,4,2,1],[1,3,4,2,1],[0,1,2,2,1]];
+  counts.forEach(function(row,li){row.forEach(function(n,si){
+    var score=(li+1)*(si+1),cls=score>=15?'r4':score>=8?'r3':score>=4?'r2':'r1';
+    box(wb,{x:si*cell+3,y:(4-li)*cell+3,w:cell-6,d:cell-6,h:4+n*13,cls:cls});
+  });});
+  pin(wb,250,250,0,'Gravité 5','');
+  pin(wb,10,10,0,'Probabilité 5','');
+  spin(document.getElementById('sceneB'),wb,-42,null);
+  var vals=[3,5,2,4,6,3,2,5,4,3,2,3],mo=['déc','jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov'];
+  document.getElementById('barsB').innerHTML=vals.map(function(v){return '<div style="--v:'+v+'" data-v="'+v+'"></div>';}).join('');
+  document.getElementById('monthsB').innerHTML=mo.map(function(m){return '<span>'+m+'</span>';}).join('');
+
+  // --- C: safety pyramid + phone tilt ---
+  var wc=document.getElementById('worldC');
+  [[200,'l5'],[160,'l4'],[120,'l3'],[80,'l2'],[40,'l1']].forEach(function(l,i){
+    box(wc,{x:(200-l[0])/2,y:(200-l[0])/2,w:l[0],d:l[0],h:26,z:i*26,cls:l[1]});
+  });
+  spin(document.getElementById('sceneC'),wc,-45,'spin');
+  var stage=document.getElementById('stageC'),phone=document.getElementById('phoneC');
+  stage.addEventListener('pointermove',function(e){
+    if(reduce)return;var r=stage.getBoundingClientRect();
+    var nx=(e.clientX-r.left)/r.width-.5,ny=(e.clientY-r.top)/r.height-.5;
+    phone.style.setProperty('--py',(nx*36).toFixed(1)+'deg');phone.style.setProperty('--px',(-ny*20).toFixed(1)+'deg');
+  });
+  stage.addEventListener('pointerleave',function(){phone.style.removeProperty('--py');phone.style.removeProperty('--px');});
+
+  // --- tabs with hash routing ---
+  var tabs=[].slice.call(document.querySelectorAll('.tab'));
+  function show(id){
+    if(!document.getElementById(id))id='modele-a';
+    tabs.forEach(function(t){var on=t.dataset.m===id;t.setAttribute('aria-selected',on);document.getElementById(t.dataset.m).hidden=!on;});
+  }
+  tabs.forEach(function(t){t.addEventListener('click',function(){show(t.dataset.m);try{history.replaceState(null,'','#'+t.dataset.m);}catch(e){location.hash=t.dataset.m;}});});
+  addEventListener('hashchange',function(){show(location.hash.slice(1));});
+  show(location.hash.slice(1)||'modele-a');
+})();
+</script>
