@@ -22,7 +22,7 @@ Preuves du 2026-11-13 (commandes lancées à la racine) :
 | `pnpm build`                                        | OK                                             |
 | `pnpm lint`                                         | OK                                             |
 | `pnpm typecheck`                                    | OK                                             |
-| `pnpm test`                                         | OK — shared 4, API 51, web 48                  |
+| `pnpm test`                                         | OK — shared 4, API 51, web 70                  |
 | `pnpm test:e2e` (PostgreSQL 16 local)               | OK — 12                                        |
 | `pnpm format:check`                                 | OK                                             |
 | Parcours réel dans un navigateur (web → API → base) | OK en 1280 px et 390 px, aucune erreur console |
