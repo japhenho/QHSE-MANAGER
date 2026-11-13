@@ -21,6 +21,11 @@ export function tooManyAttempts(retryAfterSeconds: number): AppException {
   });
 }
 
+/** Same answer whether the permission is missing or the route declares none. */
+export function forbidden(): AppException {
+  return new AppException(ERROR_CODES.FORBIDDEN, 'You are not allowed to do this');
+}
+
 export function forbiddenOrigin(): AppException {
   return new AppException(ERROR_CODES.FORBIDDEN, 'Origin not allowed');
 }

@@ -1,0 +1,61 @@
+// Access control domain: roles, their permissions and their assignment to users.
+// Permission keys are defined in code (packages/shared), not in the database.
+
+/// A set of permissions, usually one per job position. Created by tenant administrators.
+model Role {
+  id           String   @id @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  name         String
+  description  String?
+  /// Stable key of a role installed with the tenant ("administrator"...). NULL for
+  /// roles created by the tenant.
+  referenceKey String?  @map("reference_key")
+  /// The administrator role: holds every permission, cannot be changed nor deleted.
+  isSystem     Boolean  @default(false) @map("is_system")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  /// Optimistic concurrency control (ADR 0004).
+  version      Int      @default(1)
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  permissions RolePermission[]
+  assignments RoleAssignment[]
+
+  @@unique([tenantId, name])
+  @@unique([tenantId, referenceKey])
+  @@unique([tenantId, id])
+  @@map("roles")
+}
+
+model RolePermission {
+  tenantId   String @map("tenant_id") @db.Uuid
+  roleId     String @map("role_id") @db.Uuid
+  /// A key of the permission catalogue, e.g. "role:manage".
+  permission String
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  role   Role   @relation(fields: [tenantId, roleId], references: [tenantId, id], onDelete: Cascade)
+
+  @@id([roleId, permission])
+  @@index([tenantId, roleId])
+  @@map("role_permissions")
+}
+
+/// A role given to a user, for the whole tenant (narrower scopes come with lot P1-07).
+model RoleAssignment {
+  id         String   @id @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  roleId     String   @map("role_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  /// Who granted it; NULL when granted by the provisioning command.
+  assignedBy String?  @map("assigned_by") @db.Uuid
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  user   User   @relation(fields: [tenantId, userId], references: [tenantId, id], onDelete: Restrict)
+  role   Role   @relation(fields: [tenantId, roleId], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, userId, roleId])
+  @@index([tenantId, roleId])
+  @@map("role_assignments")
+}

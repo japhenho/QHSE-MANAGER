@@ -9,6 +9,8 @@ export const createUserInputSchema = z.object({
   organization: organizationCodeSchema,
   email: emailSchema,
   password: newPasswordSchema,
+  /** Gives the user the administrator role of the tenant. */
+  administrator: z.boolean().default(false),
 });
 export type CreateUserInput = z.input<typeof createUserInputSchema>;
 
@@ -36,7 +38,7 @@ export async function createUser(
   input: CreateUserInput,
   hashPassword: (password: string) => Promise<string>,
 ): Promise<{ id: string; tenantId: string; email: string }> {
-  const { organization, email, password } = createUserInputSchema.parse(input);
+  const { organization, email, password, administrator } = createUserInputSchema.parse(input);
 
   const tenant = await client.query<{ id: string }>('SELECT id FROM tenants WHERE slug = $1', [
     organization,
@@ -60,6 +62,27 @@ export async function createUser(
        VALUES ($1, $2, 'SYSTEM', 'user.created', 'user', $3, '{"via":"admin-command"}')`,
       [uuidv7(), tenantId, id],
     );
+    if (administrator) {
+      const role = await client.query<{ id: string; name: string }>(
+        'SELECT id, name FROM roles WHERE is_system',
+      );
+      const adminRole = role.rows[0];
+      if (!adminRole) throw new Error('This tenant has no administrator role');
+      await client.query(
+        'INSERT INTO role_assignments (id, tenant_id, user_id, role_id) VALUES ($1, $2, $3, $4)',
+        [uuidv7(), tenantId, id, adminRole.id],
+      );
+      await client.query(
+        `INSERT INTO audit_events (id, tenant_id, actor_type, action, resource_type, resource_id, metadata)
+         VALUES ($1, $2, 'SYSTEM', 'role.assigned', 'user', $3, $4)`,
+        [
+          uuidv7(),
+          tenantId,
+          id,
+          JSON.stringify({ via: 'admin-command', roleId: adminRole.id, roleName: adminRole.name }),
+        ],
+      );
+    }
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK');

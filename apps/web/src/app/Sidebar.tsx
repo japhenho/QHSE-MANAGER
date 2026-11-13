@@ -2,6 +2,7 @@ import type { RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 import { CloseIcon, ShieldCheckIcon } from '../components/ui';
+import { usePermissions } from '../lib/auth';
 import { cx } from '../lib/cx';
 import { NAV_ITEMS } from './navigation';
 
@@ -16,6 +17,7 @@ interface SidebarProps {
 
 export function Sidebar({ open, onClose, closeButtonRef }: SidebarProps) {
   const { t } = useTranslation();
+  const can = usePermissions();
 
   return (
     <aside
@@ -53,26 +55,28 @@ export function Sidebar({ open, onClose, closeButtonRef }: SidebarProps) {
 
       <nav aria-label={t('nav.label')} className="flex-1 overflow-y-auto p-3">
         <ul className="flex flex-col gap-1">
-          {NAV_ITEMS.map(({ id, path, labelKey, icon: Icon, end }) => (
-            <li key={id}>
-              <NavLink
-                to={path}
-                end={end}
-                onClick={onClose}
-                className={({ isActive }) =>
-                  cx(
-                    'focus-on-chrome flex min-h-touch-lg items-center gap-3 rounded-control border-l-4 px-3 text-base font-medium',
-                    isActive
-                      ? 'border-accent bg-chrome-raised text-white'
-                      : 'border-transparent text-on-chrome hover:bg-chrome-raised',
-                  )
-                }
-              >
-                <Icon className="size-6 shrink-0" />
-                <span className="min-w-0 break-words">{t(labelKey)}</span>
-              </NavLink>
-            </li>
-          ))}
+          {NAV_ITEMS.filter((item) => !item.permission || can(item.permission)).map(
+            ({ id, path, labelKey, icon: Icon, end }) => (
+              <li key={id}>
+                <NavLink
+                  to={path}
+                  end={end}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    cx(
+                      'focus-on-chrome flex min-h-touch-lg items-center gap-3 rounded-control border-l-4 px-3 text-base font-medium',
+                      isActive
+                        ? 'border-accent bg-chrome-raised text-white'
+                        : 'border-transparent text-on-chrome hover:bg-chrome-raised',
+                    )
+                  }
+                >
+                  <Icon className="size-6 shrink-0" />
+                  <span className="min-w-0 break-words">{t(labelKey)}</span>
+                </NavLink>
+              </li>
+            ),
+          )}
         </ul>
       </nav>
     </aside>

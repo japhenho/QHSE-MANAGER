@@ -14,7 +14,7 @@ Dernière mise à jour : 2026-11-13 (Phase 0).
 | D-02 | Modèle d'isolation SaaS et attentes on-premise                       | —                                               | **Tranchée**              |
 | D-03 | Fournisseur e-mail/SMS et canaux de notification terrain             | P1-08 (partiel), P2-16                          | Avant P1-08 en production |
 | D-04 | Client pilote, secteur, modules indispensables                       | Priorisation de la Phase 2 et des phases 3 à 6  | Avant la Phase 2          |
-| D-05 | Rôles métier de référence et séparation des tâches                   | P1-05 (partiel), P2-02, P2-04, P2-06            | Avant P1-05               |
+| D-05 | Rôles métier de référence et séparation des tâches                   | —                                               | **Tranchée**              |
 | D-06 | Durées de conservation (dossiers, journal d'audit)                   | P1-03 (partiel), P1-14 (partiel), Phase 7       | Avant le pilote           |
 | D-07 | Synchronisation serveur de site ↔ cloud : périmètre et calendrier    | Aucun lot des phases 1-2 ; Phase 5 et suivantes | Avant la Phase 5          |
 | D-08 | Licence et activation on-premise                                     | Phase 7 (packaging)                             | Avant la Phase 7          |

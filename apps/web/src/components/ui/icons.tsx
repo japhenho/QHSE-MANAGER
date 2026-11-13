@@ -107,3 +107,24 @@ export const ShieldCheckIcon = createIcon(
     <path d="m8.8 12 2.3 2.3 4.2-4.6" />
   </>,
 );
+
+export const KeyIcon = createIcon(
+  <>
+    <circle cx="8" cy="15" r="4" />
+    <path d="m11 12 9-9M17 6l3 3M14 9l2 2" />
+  </>,
+);
+
+export const UsersIcon = createIcon(
+  <>
+    <circle cx="9" cy="8" r="3.5" />
+    <path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8" />
+  </>,
+);
+
+export const ScrollIcon = createIcon(
+  <>
+    <path d="M6 3h12v15a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-1h10v1a3 3 0 0 0 3 3" />
+    <path d="M9 8h6M9 12h6" />
+  </>,
+);

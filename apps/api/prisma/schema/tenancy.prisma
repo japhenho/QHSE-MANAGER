@@ -26,11 +26,14 @@ model Tenant {
   createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  users          User[]
-  auditEvents    AuditEvent[]
-  authSessions   AuthSession[]
-  refreshTokens  RefreshToken[]
-  loginThrottles LoginThrottle[]
+  users           User[]
+  auditEvents     AuditEvent[]
+  authSessions    AuthSession[]
+  refreshTokens   RefreshToken[]
+  loginThrottles  LoginThrottle[]
+  roles           Role[]
+  rolePermissions RolePermission[]
+  roleAssignments RoleAssignment[]
 
   @@map("tenants")
 }
@@ -51,9 +54,10 @@ model User {
   archivedAt   DateTime?  @map("archived_at") @db.Timestamptz(3)
   archivedBy   String?    @map("archived_by") @db.Uuid
 
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  auditEvents  AuditEvent[]
-  authSessions AuthSession[]
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  auditEvents     AuditEvent[]
+  authSessions    AuthSession[]
+  roleAssignments RoleAssignment[]
 
   @@unique([tenantId, email])
   /// Target of composite foreign keys (tenant_id, <fk>) from other tenant-scoped tables.

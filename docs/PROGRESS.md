@@ -4,7 +4,7 @@ Mis à jour à chaque itération. Dernière mise à jour : 2026-11-13.
 
 ## Phase en cours
 
-**Phase 1 — Fondations.** Lots P1-01 à P1-04 livrés.
+**Phase 1 — Fondations.** Lots P1-01 à P1-05 livrés.
 
 ## Livré et vérifié
 
@@ -17,19 +17,20 @@ Mis à jour à chaque itération. Dernière mise à jour : 2026-11-13.
 - **P1-02** : tables `tenants` et `users` (minimale), RLS activée et forcée, contexte tenant (`runInTenantContext`), point d'accès unique aux données `TenantDatabase.run`, UUID v7, commande `tenant:create`, test de catalogue et test d'architecture. D-02 tranchée (base partagée), ADR 0002 accepté.
 - **P1-03** : journal d'audit `audit_events` en ajout seul (privilèges + déclencheurs), heure fixée par la base, écriture dans la transaction métier via `AuditService.record`, isolation par tenant. ADR 0005 accepté ; partitionnement vérifié faisable et reporté.
 - **P1-04** : authentification (code d'organisation + e-mail + mot de passe Argon2id), jeton d'accès court, jeton de rafraîchissement rotatif en cookie `HttpOnly` avec détection de réutilisation, verrouillage progressif, limitation de débit, garde global (refus par défaut) qui établit le contexte tenant depuis la session, commande `user:create`, écran de connexion web FR/EN. D-12 tranchée, ADR 0003 accepté.
+- **P1-05** : contrôle d'accès par rôles (catalogue de permissions dans le code, rôles composés par chaque entreprise, refus par défaut, évaluation à chaque requête, règles contre l'élévation de privilèges, dernier administrateur protégé), consultation du journal d'audit, écrans web Rôles / Utilisateurs / Journal d'audit, harnais de tests CC-1/CC-2. D-05 tranchée.
 - Cadrage : `docs/BACKLOG.md` (Phases 1 et 2 détaillées), `docs/DECISIONS-OUVERTES.md` (D-01 à D-13), ADR 0001 à 0006, maquettes dans `docs/maquettes/`.
 
 Preuves du 2026-11-13 (commandes lancées à la racine) :
 
-| Commande                              | Résultat                                                                                                                                |
-| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm build`                          | OK                                                                                                                                      |
-| `pnpm lint`                           | OK                                                                                                                                      |
-| `pnpm typecheck`                      | OK                                                                                                                                      |
-| `pnpm test`                           | OK — shared 10, API 179, web 89                                                                                                         |
-| `pnpm test:e2e` (PostgreSQL 16 local) | OK — 135 (dont authentification 36)                                                                                                     |
-| `pnpm format:check`                   | OK                                                                                                                                      |
-| Parcours réel dans un navigateur      | OK — connexion refusée puis acceptée, cookie `HttpOnly` entre les ports 5173 et 3000, session restaurée après rechargement, déconnexion |
+| Commande                              | Résultat                                                                                                                                       |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm build`                          | OK                                                                                                                                             |
+| `pnpm lint`                           | OK                                                                                                                                             |
+| `pnpm typecheck`                      | OK                                                                                                                                             |
+| `pnpm test`                           | OK — shared 21, API 179, web 108                                                                                                               |
+| `pnpm test:e2e` (PostgreSQL 16 local) | OK — 165 (dont contrôle d'accès 29, authentification 36)                                                                                       |
+| `pnpm format:check`                   | OK                                                                                                                                             |
+| Parcours réel dans un navigateur      | OK — l'administrateur crée un rôle de poste, l'attribue ; l'utilisateur ne voit que ce que le rôle autorise ; le journal d'audit trace le tout |
 
 ## Non vérifié
 
@@ -39,7 +40,7 @@ Preuves du 2026-11-13 (commandes lancées à la racine) :
 
 ## Écarts connus
 
-- `docs/ROLES-PERMISSIONS.md` et `docs/KPI.md` ne sont pas encore écrits : ils dépendent de D-05 et D-11 et seront produits dans les lots P1-05 et P2-13.
+- `docs/KPI.md` n'est pas encore écrit : il dépend de D-11 et sera produit dans le lot P2-13.
 - P1-10 (i18n) et P1-11 (design system) sont partiellement couverts par le socle web ; leur reste à faire est décrit dans le backlog.
 - Les ADR 0002 et 0003 sont au statut « Proposé ».
 
@@ -49,4 +50,4 @@ Validation du cadrage, et en priorité les décisions à trancher **avant la Pha
 
 ## Prochain lot
 
-**P1-05 — RBAC : rôles, permissions, refus par défaut.** Le mécanisme n'est pas bloqué ; le **contenu des rôles de référence dépend de D-05**. En parallèle possible : P1-11 (design system, web seul).
+**P1-06 — Structure organisationnelle : entreprises, sites, départements** (aucune décision bloquante). Trois pistes peuvent ensuite avancer en parallèle (A : organisation, B : utilisateurs, C : fichiers) ; voir `docs/BACKLOG.md`.

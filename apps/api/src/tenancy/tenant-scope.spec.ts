@@ -204,6 +204,9 @@ describe('scopeArgs (barrier 1)', () => {
       'AuthSession',
       'LoginThrottle',
       'RefreshToken',
+      'Role',
+      'RoleAssignment',
+      'RolePermission',
       'Tenant',
       'User',
     ]);

@@ -52,8 +52,10 @@ Les commandes s'exécutent sur le serveur avec le rôle propriétaire (`MIGRATIO
 Créer ensuite le premier compte de ce tenant. Le mot de passe (12 caractères au minimum) est lu sur l'entrée standard, jamais en argument :
 
 ```bash
-printf '%s' "$MOT_DE_PASSE" | pnpm user:create --organization acme-congo --email admin@acme.example
+printf '%s' "$MOT_DE_PASSE" | pnpm user:create --organization acme-congo --email admin@acme.example --administrator
 ```
+
+`--administrator` donne tous les droits, dont celui de créer les rôles de chaque poste et de les attribuer. Sans cette option, le compte n'a aucun rôle tant qu'un administrateur ne lui en attribue pas.
 
 L'utilisateur se connecte sur le web avec le code d'organisation (`acme-congo`), son adresse e-mail et son mot de passe.
 
@@ -96,4 +98,6 @@ Ils lisent `TEST_DATABASE_URL` (rôle d'exécution) et `TEST_MIGRATION_DATABASE_
 - `docs/PROGRESS.md` — état d'avancement
 - `docs/BACKLOG.md` — lots et critères d'acceptation
 - `docs/DECISIONS-OUVERTES.md` — décisions en attente
+- `docs/ROLES-PERMISSIONS.md` — permissions, rôles de référence, règles
+- `docs/CONTRIBUTING.md` — ajouter un endpoint, une table, un écran ; harnais de tests
 - `docs/adr/` — décisions d'architecture

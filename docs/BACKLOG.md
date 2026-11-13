@@ -37,7 +37,7 @@ Chaque lot doit satisfaire, en plus de ses critères propres :
 | P1-02 | Tenants et mécanisme d'isolation (application + RLS)              | P1-01            | D-02, D-12, D-13            | SEQ | Livré         |
 | P1-03 | Journal d'audit en ajout seul                                     | P1-02            | D-06 (purge seulement)      | SEQ | Livré         |
 | P1-04 | Authentification : connexion, rafraîchissement, déconnexion       | P1-03            | D-12                        | SEQ | Livré         |
-| P1-05 | RBAC : rôles, permissions, refus par défaut, harnais de tests     | P1-04            | D-05 (contenu des rôles)    | SEQ | À faire       |
+| P1-05 | RBAC : rôles, permissions, refus par défaut, harnais de tests     | P1-04            | D-05 (contenu des rôles)    | SEQ | Livré         |
 | P1-06 | Structure organisationnelle : entreprises, sites, départements    | P1-05            | —                           | A   | À faire       |
 | P1-07 | Périmètres d'accès (entreprise, site, département)                | P1-06            | D-05                        | A   | À faire       |
 | P1-08 | Gestion des utilisateurs : invitation, activation, mot de passe   | P1-05            | D-03 (production seulement) | B   | À faire       |
@@ -143,14 +143,15 @@ Chaque lot doit satisfaire, en plus de ses critères propres :
 - **Dépendances.** P1-04. Décision : D-05 (contenu des rôles de référence — le mécanisme n'est pas bloqué). `docs/ROLES-PERMISSIONS.md`.
 - **Contenu.** Catalogue de permissions `resource:action` défini dans le code (`packages/shared`) ; tables des rôles, des permissions par rôle et des attributions (périmètre « tenant » uniquement à ce stade) ; garde global de permission ; endpoints de gestion des rôles et des attributions ; endpoint de consultation du journal d'audit (`audit-log:read`) ; écrans web : liste des rôles, détail d'un rôle, attribution à un utilisateur, consultation du journal d'audit ; harnais de tests paramétré (isolation + permission) ; rôles de référence installés à la création d'un tenant.
 - **Critères d'acceptation.**
-  - [ ] Refus par défaut : un test parcourt toutes les routes enregistrées et échoue si l'une n'a ni permission déclarée ni marquage public explicite ; une route ajoutée sans déclaration répond `403`.
-  - [ ] Les permissions sont évaluées côté serveur à chaque requête : le retrait d'un rôle prend effet à la requête suivante, sans reconnexion (test).
-  - [ ] Un utilisateur ne peut pas s'attribuer un rôle ni attribuer une permission qu'il ne détient pas (test d'élévation de privilèges).
-  - [ ] Tout changement de droits (création ou modification de rôle, attribution, retrait) crée un événement d'audit (CC-3).
-  - [ ] Le dernier administrateur d'un tenant ne peut pas se retirer son rôle.
-  - [ ] **CC-1 et CC-2** pour chaque endpoint de rôles, d'attributions et du journal d'audit, écrits avec le harnais ; le harnais est documenté dans le guide de contribution.
-  - [ ] Écrans en FR/EN avec états vide, chargement et erreur ; menus masqués sans permission, le serveur restant seul juge (CC-4).
-  - [ ] `docs/ROLES-PERMISSIONS.md` mis à jour avec les clés réellement implémentées ; CC-5, CC-6, CC-7.
+  - [x] Refus par défaut : un test parcourt toutes les routes enregistrées et échoue si l'une n'a ni permission déclarée ni marquage public explicite ; une route ajoutée sans déclaration répond `403`.
+  - [x] Les permissions sont évaluées côté serveur à chaque requête : le retrait d'un rôle prend effet à la requête suivante, sans reconnexion (test).
+  - [x] Un utilisateur ne peut pas s'attribuer un rôle ni attribuer une permission qu'il ne détient pas (test d'élévation de privilèges).
+  - [x] Tout changement de droits (création ou modification de rôle, attribution, retrait) crée un événement d'audit (CC-3).
+  - [x] Le dernier administrateur d'un tenant ne peut pas se retirer son rôle.
+  - [x] **CC-1 et CC-2** pour chaque endpoint de rôles, d'attributions et du journal d'audit, écrits avec le harnais ; le harnais est documenté dans le guide de contribution.
+  - [x] Écrans en FR/EN avec états vide, chargement et erreur ; menus masqués sans permission, le serveur restant seul juge (CC-4).
+  - [x] `docs/ROLES-PERMISSIONS.md` mis à jour avec les clés réellement implémentées ; CC-5, CC-6, CC-7.
+- **Livré le 2026-11-13** sur la décision D-05. Les rôles de référence installés sont ceux qui portent des permissions existantes (Administrateur, Responsable QHSE, Auditeur) ; les autres postes sont créés par l'administrateur. La suppression d'un rôle non attribué est physique et tracée (un rôle est une configuration, pas un dossier). Harnais documenté dans `docs/CONTRIBUTING.md`.
 
 ### P1-06 — Structure organisationnelle : entreprises, sites, départements
 

@@ -1,19 +1,30 @@
 import { type CanActivate, type ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import type { PermissionKey } from '@qhse/shared';
 import type { Request } from 'express';
-import { AccessTokenService, type AccessTokenClaims } from './access-token.service.js';
-import { unauthenticated } from './auth.errors.js';
+import {
+  type Actor,
+  AUTHENTICATED_ONLY_KEY,
+  REQUIRED_PERMISSION_KEY,
+} from './access.decorators.js';
+import { AccessTokenService } from './access-token.service.js';
+import { forbidden, unauthenticated } from './auth.errors.js';
 import { AuthService } from './auth.service.js';
 import { IS_PUBLIC_KEY } from './public.decorator.js';
 
-export type AuthenticatedRequest = Request & { auth?: AccessTokenClaims };
+export type AuthenticatedRequest = Request & { auth?: Actor };
 
 const BEARER = /^Bearer ([A-Za-z0-9._-]+)$/;
 
 /**
- * Global guard: every route requires a valid access token of a live session, unless it
- * is explicitly marked `@Public()`. The identity it attaches to the request is the only
- * source of the tenant for the rest of the request.
+ * Global access guard — authentication, then authorisation, deny by default:
+ *  1. a route marked `@Public()` is open;
+ *  2. any other route needs a valid access token of a live session (401 otherwise);
+ *  3. it must then declare `@RequirePermission(...)`, held by the caller through their
+ *     roles, or `@AuthenticatedOnly()`. A route that declares nothing is refused (403).
+ * Session and permissions are read from the database on every request: a logout, a
+ * disabled account or a removed role takes effect immediately.
+ * The identity attached to the request is the only source of the tenant afterwards.
  */
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -25,20 +36,30 @@ export class AuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     if (context.getType() !== 'http') return false;
-    const isPublic = this.reflector.getAllAndOverride<boolean | undefined>(IS_PUBLIC_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-    if (isPublic) return true;
+    const targets = [context.getHandler(), context.getClass()];
+    if (this.reflector.getAllAndOverride<boolean | undefined>(IS_PUBLIC_KEY, targets)) return true;
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const token = BEARER.exec(request.headers.authorization ?? '')?.[1];
     if (!token) throw unauthenticated();
 
     const claims = await this.accessTokens.verify(token);
-    if (!claims || !(await this.auth.isSessionActive(claims))) throw unauthenticated();
+    if (!claims) throw unauthenticated();
+    const permissions = await this.auth.loadSessionPermissions(claims);
+    if (permissions === null) throw unauthenticated();
 
-    request.auth = claims;
+    const required = this.reflector.getAllAndOverride<PermissionKey | undefined>(
+      REQUIRED_PERMISSION_KEY,
+      targets,
+    );
+    const authenticatedOnly = this.reflector.getAllAndOverride<boolean | undefined>(
+      AUTHENTICATED_ONLY_KEY,
+      targets,
+    );
+    const allowed = required !== undefined ? permissions.has(required) : authenticatedOnly === true;
+    if (!allowed) throw forbidden();
+
+    request.auth = { ...claims, permissions };
     return true;
   }
 }

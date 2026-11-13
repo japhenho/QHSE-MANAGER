@@ -9,8 +9,8 @@ import {
 import type { Request, Response } from 'express';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js';
 import { ENV, type Env } from '../config/index.js';
-import { forbiddenOrigin, retryAfterOf, tooManyAttempts, unauthenticated } from './auth.errors.js';
-import type { AuthenticatedRequest } from './auth.guard.js';
+import { forbiddenOrigin, retryAfterOf, tooManyAttempts } from './auth.errors.js';
+import { type Actor, AuthenticatedOnly, CurrentActor } from './access.decorators.js';
 import { AuthService, type IssuedSession } from './auth.service.js';
 import { Public } from './public.decorator.js';
 import { RateLimiter, type RateLimitRule } from './rate-limiter.service.js';
@@ -79,12 +79,11 @@ export class AuthController {
   }
 
   @Get('me')
+  @AuthenticatedOnly()
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'The authenticated user and their tenant' })
-  me(@Req() request: AuthenticatedRequest): Promise<CurrentUserResponse> {
-    const auth = request.auth;
-    if (!auth) throw unauthenticated();
-    return this.auth.currentIdentity(auth.tenantId, auth.userId);
+  @ApiOperation({ summary: 'The authenticated user, their tenant and their permissions' })
+  me(@CurrentActor() actor: Actor): Promise<CurrentUserResponse> {
+    return this.auth.currentIdentity(actor.tenantId, actor.userId);
   }
 
   // ---------------------------------------------------------------- helpers

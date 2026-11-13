@@ -1,8 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { AuthSessionResponse, CurrentUserResponse, LoginRequest } from '@qhse/shared';
+import type {
+  AuthSessionResponse,
+  CurrentUserResponse,
+  LoginRequest,
+  PermissionKey,
+} from '@qhse/shared';
 import { AuditService } from '../audit/index.js';
 import { Clock } from '../common/clock.js';
 import { ENV, type Env } from '../config/index.js';
+import { effectivePermissions } from '../rbac/permissions.js';
 import {
   type RequestOrigin,
   runInTenantContext,
@@ -275,19 +281,22 @@ export class AuthService {
   // ------------------------------------------------- per-request validation
 
   /**
-   * True when the session named by an access token is still usable. Checked on every
-   * request so that a logout, a revocation or a disabled account takes effect at once,
-   * without waiting for the access token to expire.
+   * Permissions of the user of an access token, or null when its session is no longer
+   * usable. Read on every request so that a logout, a revocation, a disabled account or
+   * a removed role takes effect at once, without waiting for the token to expire.
    */
-  async isSessionActive(claims: AccessTokenClaims): Promise<boolean> {
+  async loadSessionPermissions(
+    claims: AccessTokenClaims,
+  ): Promise<ReadonlySet<PermissionKey> | null> {
     const now = this.clock.now();
     return runInTenantContext({ tenantId: claims.tenantId }, () =>
       this.db.run(async (tx) => {
         const session = await tx.authSession.findUnique({ where: { id: claims.sessionId } });
-        if (!session || session.userId !== claims.userId) return false;
-        if (session.revokedAt !== null || session.expiresAt <= now) return false;
+        if (!session || session.userId !== claims.userId) return null;
+        if (session.revokedAt !== null || session.expiresAt <= now) return null;
         const user = await tx.user.findUnique({ where: { id: claims.userId } });
-        return user !== null && user.status === 'ACTIVE' && user.archivedAt === null;
+        if (user === null || user.status !== 'ACTIVE' || user.archivedAt !== null) return null;
+        return effectivePermissions(tx, claims.userId);
       }),
     );
   }
@@ -344,6 +353,7 @@ export class AuthService {
     return {
       user: { id: user.id, email: user.email },
       tenant: { id: tenant.id, slug: tenant.slug, name: tenant.name },
+      permissions: [...(await effectivePermissions(tx, userId))].sort(),
     };
   }
 

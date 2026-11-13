@@ -6,3 +6,4 @@ export { ErrorState } from './ErrorState';
 export { PageHeader } from './PageHeader';
 export { LoadingState, Spinner } from './Spinner';
 export * from './icons';
+export { Pagination } from './Pagination';

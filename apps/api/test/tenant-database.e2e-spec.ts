@@ -249,6 +249,26 @@ describe('tenant provisioning (decision D-13)', () => {
     expect(rows).toEqual([{ slug: 'acme-congo', name: 'ACME Congo (DEMO)', status: 'ACTIVE' }]);
   });
 
+  it('installs the reference roles, with a single system administrator role', async () => {
+    const { rows: tenants } = await owner.query<{ id: string }>(
+      `SELECT id FROM tenants WHERE slug = 'acme-congo'`,
+    );
+    const tenantId = tenants[0]?.id as string;
+    const roles = await asTenant(owner, tenantId, async () => {
+      const result = await owner.query(
+        `SELECT r.reference_key, r.is_system,
+                (SELECT count(*)::int FROM role_permissions p WHERE p.role_id = r.id) AS permissions
+           FROM roles r ORDER BY r.reference_key`,
+      );
+      return result.rows;
+    });
+    expect(roles).toEqual([
+      { reference_key: 'administrator', is_system: true, permissions: 0 },
+      { reference_key: 'auditor', is_system: false, permissions: 1 },
+      { reference_key: 'qhse-manager', is_system: false, permissions: 3 },
+    ]);
+  });
+
   it('refuses a duplicate slug', async () => {
     await expect(createTenant(owner, { slug: 'acme-congo', name: 'Other' })).rejects.toBeInstanceOf(
       TenantAlreadyExistsError,
@@ -283,7 +303,7 @@ describe('tenant provisioning (decision D-13)', () => {
   it.each([
     ['get', '/api/v1/tenants'],
     ['post', '/api/v1/tenants'],
-    ['get', '/api/v1/users'],
+    ['delete', '/api/v1/tenants'],
   ] as const)('exposes no HTTP endpoint: %s %s', async (method, url) => {
     const response = await request(app.getHttpServer())[method](url).expect(404);
     expect(response.body).toMatchObject({ code: 'NOT_FOUND' });

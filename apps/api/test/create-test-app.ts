@@ -1,4 +1,4 @@
-import type { INestApplication } from '@nestjs/common';
+import type { INestApplication, Type } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { App } from 'supertest/types.js';
 import { AppModule } from '../src/app.module.js';
@@ -18,6 +18,8 @@ export interface TestAppOptions {
   clock?: Clock;
   /** Receives every structured log line. */
   logStream?: LogStream;
+  /** Extra controllers mounted next to the application (to test the access rules). */
+  controllers?: Type[];
 }
 
 export async function createTestApp(
@@ -26,7 +28,10 @@ export async function createTestApp(
 ): Promise<TestApp> {
   const env: Env = { ...loadEnv(), LOG_LEVEL: 'silent', ...envOverrides };
 
-  let builder = Test.createTestingModule({ imports: [AppModule] })
+  let builder = Test.createTestingModule({
+    imports: [AppModule],
+    controllers: options.controllers ?? [],
+  })
     .overrideProvider(ENV)
     .useValue(env);
   if (options.clock) builder = builder.overrideProvider(Clock).useValue(options.clock);

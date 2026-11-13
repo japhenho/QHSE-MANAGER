@@ -7,6 +7,7 @@ import { ApiExceptionFilter } from './common/filters/api-exception.filter.js';
 import { buildLoggerOptions } from './common/logging/logger.options.js';
 import { ENV, EnvModule, LOG_STREAM } from './config/index.js';
 import { HealthModule } from './health/health.module.js';
+import { RbacModule } from './rbac/rbac.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { TenancyModule } from './tenancy/tenancy.module.js';
 
@@ -18,6 +19,7 @@ import { TenancyModule } from './tenancy/tenancy.module.js';
     TenancyModule,
     AuditModule,
     AuthModule,
+    RbacModule,
     HealthModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: ApiExceptionFilter }],

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { PermissionKey } from './permissions';
 
 /** Organisation code typed on the login screen (identifies the tenant, decision D-12). */
 export const organizationCodeSchema = z.string().trim().toLowerCase().min(3).max(50);
@@ -35,6 +36,11 @@ export interface AuthenticatedTenant {
 export interface CurrentUserResponse {
   user: AuthenticatedUser;
   tenant: AuthenticatedTenant;
+  /**
+   * What the user may do, for display purposes (hide a menu, disable a button).
+   * The server checks every request by itself; this list grants nothing.
+   */
+  permissions: PermissionKey[];
 }
 
 /** `POST /auth/login` and `POST /auth/refresh` */

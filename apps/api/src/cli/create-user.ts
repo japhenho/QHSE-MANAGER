@@ -1,7 +1,11 @@
 /**
  * Administration command: creates a user able to log in (first administrator of a tenant).
  *
- *   printf '%s' "$PASSWORD" | pnpm user:create --organization acme-congo --email admin@acme.example
+ *   printf '%s' "$PASSWORD" | pnpm user:create --organization acme-congo --email admin@acme.example --administrator
+ *
+ * `--administrator` gives the administrator role (every right, including creating the
+ * roles of each job position). Without it the user has no role and can do nothing
+ * until an administrator assigns one.
  *
  * The password is read from standard input, never from the command line: arguments
  * end up in the shell history and in the process list. Runs with the OWNER database
@@ -21,7 +25,11 @@ import {
 
 async function main(): Promise<number> {
   const { values } = parseArgs({
-    options: { organization: { type: 'string' }, email: { type: 'string' } },
+    options: {
+      organization: { type: 'string' },
+      email: { type: 'string' },
+      administrator: { type: 'boolean', default: false },
+    },
     strict: true,
   });
   if (process.stdin.isTTY) {
@@ -42,7 +50,12 @@ async function main(): Promise<number> {
     await client.connect();
     const user = await createUser(
       client,
-      { organization: values.organization ?? '', email: values.email ?? '', password },
+      {
+        organization: values.organization ?? '',
+        email: values.email ?? '',
+        password,
+        administrator: values.administrator,
+      },
       hashPassword,
     );
     console.log(JSON.stringify(user));

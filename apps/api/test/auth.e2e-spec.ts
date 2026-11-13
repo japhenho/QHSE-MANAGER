@@ -75,6 +75,8 @@ describe('authentication (ADR 0003)', () => {
         expiresIn: 900,
         user: { id: alpha.userId, email: alpha.email },
         tenant: { id: alpha.tenantId, slug: 'auth-alpha', name: 'auth-alpha (DEMO)' },
+        // No role yet: the account can log in but may do nothing else.
+        permissions: [],
       });
       expect(response.headers['cache-control']).toBe('no-store');
 
@@ -103,6 +105,7 @@ describe('authentication (ADR 0003)', () => {
       expect(response.body).toEqual({
         user: { id: alpha.userId, email: alpha.email },
         tenant: { id: alpha.tenantId, slug: 'auth-alpha', name: 'auth-alpha (DEMO)' },
+        permissions: [],
       });
     });
 

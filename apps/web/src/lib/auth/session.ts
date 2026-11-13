@@ -1,4 +1,10 @@
-import type { AuthSessionResponse, CurrentUserResponse, LoginRequest } from '@qhse/shared';
+import {
+  type AuthSessionResponse,
+  type CurrentUserResponse,
+  isPermissionKey,
+  type LoginRequest,
+  type PermissionKey,
+} from '@qhse/shared';
 import { useSyncExternalStore } from 'react';
 import { apiFetch, registerAuthBridge } from '../api';
 
@@ -38,6 +44,16 @@ export function useAuth(): AuthState {
   return useSyncExternalStore(subscribe, getAuthState);
 }
 
+/**
+ * Returns a function telling whether the signed-in user holds a permission. Use it to
+ * hide what the user cannot do; never as a security control — the server checks.
+ */
+export function usePermissions(): (permission: PermissionKey) => boolean {
+  const auth = useAuth();
+  const held = auth.status === 'authenticated' ? auth.identity.permissions : [];
+  return (permission) => held.includes(permission);
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
@@ -56,12 +72,19 @@ function parseSession(data: unknown): AuthSessionResponse {
   ) {
     throw new TypeError('session.tenant');
   }
-  return data as unknown as AuthSessionResponse;
+  // Unknown keys (a newer server) are ignored rather than trusted.
+  const permissions = Array.isArray(data['permissions'])
+    ? data['permissions'].filter(isPermissionKey)
+    : [];
+  return { ...(data as unknown as AuthSessionResponse), permissions };
 }
 
 function accept(session: AuthSessionResponse): string {
   setState(
-    { status: 'authenticated', identity: { user: session.user, tenant: session.tenant } },
+    {
+      status: 'authenticated',
+      identity: { user: session.user, tenant: session.tenant, permissions: session.permissions },
+    },
     session.accessToken,
   );
   return session.accessToken;

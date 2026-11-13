@@ -1,9 +1,11 @@
+import { PERMISSIONS } from '@qhse/shared';
 import type { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { RouteObject } from 'react-router-dom';
 import { LoadingState } from '../components/ui';
 import { AppShell } from './AppShell';
 import { RequireAuth } from './RequireAuth';
+import { RequirePermission } from './RequirePermission';
 import { ROUTES } from './navigation';
 import { RouteError } from './RouteError';
 
@@ -48,6 +50,40 @@ export const routes: RouteObject[] = [
               {
                 path: ROUTES.systemStatus,
                 ...lazyPage(() => import('../features/system-status/SystemStatusPage')),
+              },
+              {
+                element: <RequirePermission permission={PERMISSIONS.ROLE_READ} />,
+                children: [
+                  { path: ROUTES.roles, ...lazyPage(() => import('../features/access/RolesPage')) },
+                  {
+                    path: ROUTES.role,
+                    ...lazyPage(() => import('../features/access/RoleEditorPage')),
+                  },
+                ],
+              },
+              {
+                element: <RequirePermission permission={PERMISSIONS.ROLE_MANAGE} />,
+                children: [
+                  {
+                    path: ROUTES.roleNew,
+                    ...lazyPage(() => import('../features/access/RoleEditorPage')),
+                  },
+                ],
+              },
+              {
+                element: <RequirePermission permission={PERMISSIONS.USER_READ} />,
+                children: [
+                  { path: ROUTES.users, ...lazyPage(() => import('../features/access/UsersPage')) },
+                ],
+              },
+              {
+                element: <RequirePermission permission={PERMISSIONS.AUDIT_LOG_READ} />,
+                children: [
+                  {
+                    path: ROUTES.auditLog,
+                    ...lazyPage(() => import('../features/access/AuditLogPage')),
+                  },
+                ],
               },
               { path: '*', ...lazyPage(() => import('../features/not-found/NotFoundPage')) },
             ],

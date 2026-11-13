@@ -6,5 +6,6 @@ export {
   signIn,
   signOut,
   useAuth,
+  usePermissions,
   type AuthState,
 } from './session';
