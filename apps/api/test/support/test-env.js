@@ -39,5 +39,7 @@ export function resolveTestDatabase() {
   process.env.DATABASE_URL = appUrl;
   process.env.MIGRATION_DATABASE_URL = ownerUrl;
   process.env.NODE_ENV = 'test';
+  // Fixed signing key for tests only (not a secret).
+  process.env.AUTH_JWT_SECRET ??= 'test-only-signing-key-not-a-secret-0123456789';
   return { appUrl, ownerUrl, apiRoot: API_ROOT };
 }

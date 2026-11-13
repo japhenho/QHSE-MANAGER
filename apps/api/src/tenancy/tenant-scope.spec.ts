@@ -199,6 +199,13 @@ describe('scopeArgs (barrier 1)', () => {
   });
 
   it('declares a rule for every model', () => {
-    expect(Object.keys(TENANT_SCOPE).sort()).toEqual(['AuditEvent', 'Tenant', 'User']);
+    expect(Object.keys(TENANT_SCOPE).sort()).toEqual([
+      'AuditEvent',
+      'AuthSession',
+      'LoginThrottle',
+      'RefreshToken',
+      'Tenant',
+      'User',
+    ]);
   });
 });

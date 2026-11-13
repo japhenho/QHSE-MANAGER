@@ -5,9 +5,12 @@ import {
   ApiServiceUnavailableResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Public } from '../auth/public.decorator.js';
 import { API_ERROR_SCHEMA } from '../common/openapi/api-error.schema.js';
 import { HealthService, type LivenessReport, type ReadinessReport } from './health.service.js';
 
+/** Probes are called by the infrastructure, without credentials. They expose no data. */
+@Public()
 @ApiTags('health')
 @Controller('health')
 export class HealthController {

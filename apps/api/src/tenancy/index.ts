@@ -13,3 +13,4 @@ export {
   type TenantContext,
 } from './tenant-context.js';
 export { isUuid, uuidv7 } from './uuid.js';
+export { TenantResolver } from './tenant-resolver.service.js';

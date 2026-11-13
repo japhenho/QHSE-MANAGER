@@ -43,6 +43,30 @@ export const fr = {
     configDescription:
       "La variable {{variable}} est absente ou invalide. L'application ne peut pas contacter l'API. Corrigez la configuration puis relancez l'application.",
   },
+  auth: {
+    title: 'Connexion',
+    subtitle: 'Connectez-vous avec les identifiants fournis par votre organisation.',
+    organization: "Code d'organisation",
+    organizationHint: 'Communiqué par votre administrateur, par exemple « acme-congo ».',
+    email: 'Adresse e-mail',
+    password: 'Mot de passe',
+    submit: 'Se connecter',
+    submitting: 'Connexion en cours…',
+    restoring: 'Vérification de votre session…',
+    signOut: 'Se déconnecter',
+    signedInAs: 'Connecté : {{email}}',
+    fieldErrors: {
+      organization: "Saisissez le code d'organisation (3 caractères au minimum).",
+      email: 'Saisissez une adresse e-mail valide.',
+      password: 'Saisissez votre mot de passe.',
+    },
+    errors: {
+      invalidCredentials: "Code d'organisation, adresse e-mail ou mot de passe incorrect.",
+      invalidForm: 'Vérifiez les champs signalés puis réessayez.',
+      tooManyAttempts_one: 'Trop de tentatives. Réessayez dans {{count}} minute.',
+      tooManyAttempts_other: 'Trop de tentatives. Réessayez dans {{count}} minutes.',
+    },
+  },
   home: {
     title: 'Accueil',
     description: 'Plateforme QHSE pour les opérations industrielles.',

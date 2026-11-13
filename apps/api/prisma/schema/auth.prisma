@@ -1,0 +1,58 @@
+// Authentication domain (ADR 0003): sessions, rotating refresh tokens, login throttling.
+
+/// One login on one device ("token family"). Revoking it invalidates all its tokens
+/// and every access token that carries its id.
+model AuthSession {
+  id            String    @id @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  /// Absolute end of the session, whatever the activity.
+  expiresAt     DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt     DateTime? @map("revoked_at") @db.Timestamptz(3)
+  /// "logout", "reuse_detected", "user_disabled"...
+  revokedReason String?   @map("revoked_reason")
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  user          User           @relation(fields: [tenantId, userId], references: [tenantId, id], onDelete: Restrict)
+  refreshTokens RefreshToken[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, userId])
+  @@map("auth_sessions")
+}
+
+/// A refresh token, stored as a hash only. Used once; its use creates a successor.
+model RefreshToken {
+  id        String    @id @db.Uuid
+  tenantId  String    @map("tenant_id") @db.Uuid
+  sessionId String    @map("session_id") @db.Uuid
+  /// SHA-256 (hex) of the random token. The token itself is never stored.
+  tokenHash String    @unique @map("token_hash")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  /// End of the inactivity window opened by this token.
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+
+  tenant  Tenant      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  session AuthSession @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Restrict)
+
+  @@index([tenantId, sessionId])
+  @@map("refresh_tokens")
+}
+
+/// Consecutive failed logins for one e-mail of one tenant, whether or not an account
+/// exists for it: a known and an unknown account are throttled identically.
+model LoginThrottle {
+  id           String    @id @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  email        String
+  failedCount  Int       @default(0) @map("failed_count")
+  lastFailedAt DateTime  @map("last_failed_at") @db.Timestamptz(3)
+  lockedUntil  DateTime? @map("locked_until") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, email])
+  @@map("login_throttles")
+}

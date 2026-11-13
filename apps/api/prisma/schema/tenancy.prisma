@@ -26,28 +26,34 @@ model Tenant {
   createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  users       User[]
-  auditEvents AuditEvent[]
+  users          User[]
+  auditEvents    AuditEvent[]
+  authSessions   AuthSession[]
+  refreshTokens  RefreshToken[]
+  loginThrottles LoginThrottle[]
 
   @@map("tenants")
 }
 
 /// Minimal user record (completed by the authentication lot P1-04).
 model User {
-  id         String     @id @db.Uuid
-  tenantId   String     @map("tenant_id") @db.Uuid
+  id           String     @id @db.Uuid
+  tenantId     String     @map("tenant_id") @db.Uuid
   /// Stored lower-cased. Unique per tenant (decision D-12, provisional option A).
-  email      String
-  status     UserStatus @default(ACTIVE)
-  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt  DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  email        String
+  status       UserStatus @default(ACTIVE)
+  /// Argon2id hash (parameters included). NULL: the account cannot log in.
+  passwordHash String?    @map("password_hash")
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
   /// Optimistic concurrency control (ADR 0004).
-  version    Int        @default(1)
-  archivedAt DateTime?  @map("archived_at") @db.Timestamptz(3)
-  archivedBy String?    @map("archived_by") @db.Uuid
+  version      Int        @default(1)
+  archivedAt   DateTime?  @map("archived_at") @db.Timestamptz(3)
+  archivedBy   String?    @map("archived_by") @db.Uuid
 
-  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  auditEvents AuditEvent[]
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  auditEvents  AuditEvent[]
+  authSessions AuthSession[]
 
   @@unique([tenantId, email])
   /// Target of composite foreign keys (tenant_id, <fk>) from other tenant-scoped tables.

@@ -42,6 +42,30 @@ export const en: Translation = {
     configDescription:
       'The {{variable}} variable is missing or invalid. The application cannot reach the API. Fix the configuration and restart the application.',
   },
+  auth: {
+    title: 'Sign in',
+    subtitle: 'Sign in with the credentials provided by your organisation.',
+    organization: 'Organisation code',
+    organizationHint: 'Given by your administrator, for example "acme-congo".',
+    email: 'E-mail address',
+    password: 'Password',
+    submit: 'Sign in',
+    submitting: 'Signing in…',
+    restoring: 'Checking your session…',
+    signOut: 'Sign out',
+    signedInAs: 'Signed in: {{email}}',
+    fieldErrors: {
+      organization: 'Enter the organisation code (at least 3 characters).',
+      email: 'Enter a valid e-mail address.',
+      password: 'Enter your password.',
+    },
+    errors: {
+      invalidCredentials: 'Incorrect organisation code, e-mail address or password.',
+      invalidForm: 'Check the highlighted fields and try again.',
+      tooManyAttempts_one: 'Too many attempts. Try again in {{count}} minute.',
+      tooManyAttempts_other: 'Too many attempts. Try again in {{count}} minutes.',
+    },
+  },
   home: {
     title: 'Home',
     description: 'QHSE platform for industrial operations.',

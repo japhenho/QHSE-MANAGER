@@ -4,7 +4,7 @@ Mis à jour à chaque itération. Dernière mise à jour : 2026-11-13.
 
 ## Phase en cours
 
-**Phase 1 — Fondations.** Lots P1-01, P1-02 et P1-03 livrés.
+**Phase 1 — Fondations.** Lots P1-01 à P1-04 livrés.
 
 ## Livré et vérifié
 
@@ -16,19 +16,20 @@ Mis à jour à chaque itération. Dernière mise à jour : 2026-11-13.
 - **P1-01** : deux rôles PostgreSQL (propriétaire pour les migrations, exécution pour l'API, sans DDL ni contournement de la RLS), script d'initialisation rejouable `infra/postgres/db-init.sh`, harnais de tests d'intégration (base `*_test`, migrations appliquées, échec franc si la base est injoignable), schéma Prisma réparti par domaine.
 - **P1-02** : tables `tenants` et `users` (minimale), RLS activée et forcée, contexte tenant (`runInTenantContext`), point d'accès unique aux données `TenantDatabase.run`, UUID v7, commande `tenant:create`, test de catalogue et test d'architecture. D-02 tranchée (base partagée), ADR 0002 accepté.
 - **P1-03** : journal d'audit `audit_events` en ajout seul (privilèges + déclencheurs), heure fixée par la base, écriture dans la transaction métier via `AuditService.record`, isolation par tenant. ADR 0005 accepté ; partitionnement vérifié faisable et reporté.
+- **P1-04** : authentification (code d'organisation + e-mail + mot de passe Argon2id), jeton d'accès court, jeton de rafraîchissement rotatif en cookie `HttpOnly` avec détection de réutilisation, verrouillage progressif, limitation de débit, garde global (refus par défaut) qui établit le contexte tenant depuis la session, commande `user:create`, écran de connexion web FR/EN. D-12 tranchée, ADR 0003 accepté.
 - Cadrage : `docs/BACKLOG.md` (Phases 1 et 2 détaillées), `docs/DECISIONS-OUVERTES.md` (D-01 à D-13), ADR 0001 à 0006, maquettes dans `docs/maquettes/`.
 
 Preuves du 2026-11-13 (commandes lancées à la racine) :
 
-| Commande                                            | Résultat                                                                                |
-| --------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `pnpm build`                                        | OK                                                                                      |
-| `pnpm lint`                                         | OK                                                                                      |
-| `pnpm typecheck`                                    | OK                                                                                      |
-| `pnpm test`                                         | OK — shared 4, API 148, web 70                                                          |
-| `pnpm test:e2e` (PostgreSQL 16 local)               | OK — 99 (santé 12, rôles 15, RLS 26, chemin applicatif et provisionnement 24, audit 22) |
-| `pnpm format:check`                                 | OK                                                                                      |
-| Parcours réel dans un navigateur (web → API → base) | OK en 1280 px et 390 px, aucune erreur console                                          |
+| Commande                              | Résultat                                                                                                                                |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm build`                          | OK                                                                                                                                      |
+| `pnpm lint`                           | OK                                                                                                                                      |
+| `pnpm typecheck`                      | OK                                                                                                                                      |
+| `pnpm test`                           | OK — shared 10, API 179, web 89                                                                                                         |
+| `pnpm test:e2e` (PostgreSQL 16 local) | OK — 135 (dont authentification 36)                                                                                                     |
+| `pnpm format:check`                   | OK                                                                                                                                      |
+| Parcours réel dans un navigateur      | OK — connexion refusée puis acceptée, cookie `HttpOnly` entre les ports 5173 et 3000, session restaurée après rechargement, déconnexion |
 
 ## Non vérifié
 
@@ -48,4 +49,4 @@ Validation du cadrage, et en priorité les décisions à trancher **avant la Pha
 
 ## Prochain lot
 
-**P1-04 — Authentification** : **bloqué par D-12** (identification du tenant à la connexion). Sans cette décision, seul P1-11 (design system, web seul) peut avancer.
+**P1-05 — RBAC : rôles, permissions, refus par défaut.** Le mécanisme n'est pas bloqué ; le **contenu des rôles de référence dépend de D-05**. En parallèle possible : P1-11 (design system, web seul).

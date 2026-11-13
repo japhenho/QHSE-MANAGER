@@ -21,7 +21,7 @@ Dernière mise à jour : 2026-11-13 (Phase 0).
 | D-09 | Méthodes MFA utilisables en faible connectivité                      | P1-09                                           | Avant P1-09               |
 | D-10 | Classification des incidents et matrice de risques « DÉMO »          | P2-01 (partiel), P2-07 (partiel)                | Avant la Phase 2          |
 | D-11 | Définitions KPI de référence et source des heures travaillées        | P2-11, P2-12, P2-13                             | Avant P2-11               |
-| D-12 | Identité des utilisateurs et identification du tenant à la connexion | P1-02 (partiel), P1-04                          | **Avant la Phase 1**      |
+| D-12 | Identité des utilisateurs et identification du tenant à la connexion | —                                               | **Tranchée**              |
 | D-13 | Provisionnement des tenants et rôle « opérateur de plateforme »      | P1-02 (partiel)                                 | Avant P1-02               |
 
 ---
@@ -330,6 +330,6 @@ Dernière mise à jour : 2026-11-13 (Phase 0).
 | D-02 | **Base partagée** : `tenant_id` + filtrage applicatif centralisé + Row-Level Security (ADR 0002, accepté). Une instance dédiée mono-tenant (même code) reste possible pour un client qui exigerait une séparation physique. | 2026-11-13 | Porteur du projet |
 | —    | Direction visuelle « Salle de contrôle » (ADR 0006).                                                                                                                                                                        | 2026-11-13 | Porteur du projet |
 
-Le lot P1-02 a été réalisé avec les **hypothèses provisoires** de D-12 (e-mail unique par tenant) et de D-13 (création de tenant par commande serveur, aucun compte transverse). Ces deux décisions restent ouvertes ; D-12 bloque P1-04.
+Les lots P1-02 et P1-04 reposent sur l'**hypothèse provisoire** de D-13 (création de tenant et du premier compte par commande serveur, aucun compte transverse). Cette décision reste ouverte.
 
 Pour mémoire, les décisions produit déjà validées (non rediscutées ici) figurent dans la section 1 du prompt maître : marché, modèle SaaS + licence privée sur une seule base de code, déploiement hybride, Web + Mobile, FR/EN dès le départ.

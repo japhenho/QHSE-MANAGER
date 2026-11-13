@@ -31,23 +31,23 @@ Chaque lot doit satisfaire, en plus de ses critères propres :
 
 ## Synthèse et ordonnancement
 
-| ID    | Titre                                                             | Dépend de        | Décisions                   | //  | Statut         |
-| ----- | ----------------------------------------------------------------- | ---------------- | --------------------------- | --- | -------------- |
-| P1-01 | Socle base de données : rôles PostgreSQL et harnais d'intégration | Socle Phase 0    | —                           | SEQ | Livré          |
-| P1-02 | Tenants et mécanisme d'isolation (application + RLS)              | P1-01            | D-02, D-12, D-13            | SEQ | Livré          |
-| P1-03 | Journal d'audit en ajout seul                                     | P1-02            | D-06 (purge seulement)      | SEQ | Livré          |
-| P1-04 | Authentification : connexion, rafraîchissement, déconnexion       | P1-03            | D-12                        | SEQ | Partiel (D-12) |
-| P1-05 | RBAC : rôles, permissions, refus par défaut, harnais de tests     | P1-04            | D-05 (contenu des rôles)    | SEQ | À faire        |
-| P1-06 | Structure organisationnelle : entreprises, sites, départements    | P1-05            | —                           | A   | À faire        |
-| P1-07 | Périmètres d'accès (entreprise, site, département)                | P1-06            | D-05                        | A   | À faire        |
-| P1-08 | Gestion des utilisateurs : invitation, activation, mot de passe   | P1-05            | D-03 (production seulement) | B   | À faire        |
-| P1-09 | MFA pour les comptes privilégiés                                  | P1-08            | D-09                        | B   | Bloqué (D-09)  |
-| P1-10 | i18n FR/EN et paramètres régionaux                                | P1-06            | —                           | A   | À faire        |
-| P1-11 | Design system de base                                             | Socle Phase 0    | —                           | W   | À faire        |
-| P1-12 | Idempotence et contrôle de version des écritures                  | P1-06            | —                           | A   | À faire        |
-| P1-13 | Stockage de fichiers et upload sécurisé                           | P1-05            | D-01 (production seulement) | C   | À faire        |
-| P1-14 | Documents, versions contrôlées et numérotation métier             | P1-13, P1-07     | D-06 (purge seulement)      | SEQ | À faire        |
-| P1-15 | Clôture de la Phase 1 : installation depuis zéro, E2E, rapport    | Tous les lots P1 | —                           | SEQ | À faire        |
+| ID    | Titre                                                             | Dépend de        | Décisions                   | //  | Statut        |
+| ----- | ----------------------------------------------------------------- | ---------------- | --------------------------- | --- | ------------- |
+| P1-01 | Socle base de données : rôles PostgreSQL et harnais d'intégration | Socle Phase 0    | —                           | SEQ | Livré         |
+| P1-02 | Tenants et mécanisme d'isolation (application + RLS)              | P1-01            | D-02, D-12, D-13            | SEQ | Livré         |
+| P1-03 | Journal d'audit en ajout seul                                     | P1-02            | D-06 (purge seulement)      | SEQ | Livré         |
+| P1-04 | Authentification : connexion, rafraîchissement, déconnexion       | P1-03            | D-12                        | SEQ | Livré         |
+| P1-05 | RBAC : rôles, permissions, refus par défaut, harnais de tests     | P1-04            | D-05 (contenu des rôles)    | SEQ | À faire       |
+| P1-06 | Structure organisationnelle : entreprises, sites, départements    | P1-05            | —                           | A   | À faire       |
+| P1-07 | Périmètres d'accès (entreprise, site, département)                | P1-06            | D-05                        | A   | À faire       |
+| P1-08 | Gestion des utilisateurs : invitation, activation, mot de passe   | P1-05            | D-03 (production seulement) | B   | À faire       |
+| P1-09 | MFA pour les comptes privilégiés                                  | P1-08            | D-09                        | B   | Bloqué (D-09) |
+| P1-10 | i18n FR/EN et paramètres régionaux                                | P1-06            | —                           | A   | À faire       |
+| P1-11 | Design system de base                                             | Socle Phase 0    | —                           | W   | À faire       |
+| P1-12 | Idempotence et contrôle de version des écritures                  | P1-06            | —                           | A   | À faire       |
+| P1-13 | Stockage de fichiers et upload sécurisé                           | P1-05            | D-01 (production seulement) | C   | À faire       |
+| P1-14 | Documents, versions contrôlées et numérotation métier             | P1-13, P1-07     | D-06 (purge seulement)      | SEQ | À faire       |
+| P1-15 | Clôture de la Phase 1 : installation depuis zéro, E2E, rapport    | Tous les lots P1 | —                           | SEQ | À faire       |
 
 ### Parallélisation de la Phase 1
 
@@ -123,18 +123,19 @@ Chaque lot doit satisfaire, en plus de ses critères propres :
 - **Dépendances.** P1-03. Décision : D-12 (hypothèse provisoire : option A). ADR 0003.
 - **Contenu.** Complément de `users` (hachage Argon2id) ; table des jetons de rafraîchissement (familles) ; endpoints `POST /api/v1/auth/login`, `/refresh`, `/logout`, `GET /api/v1/auth/me` ; garde global d'authentification qui alimente le contexte tenant ; limitation de débit et verrouillage progressif ; écran de connexion web, garde de routes, rafraîchissement silencieux. Les comptes sont créés par la commande d'administration (un administrateur initial par tenant) jusqu'à P1-08.
 - **Critères d'acceptation.**
-  - [ ] Connexion valide : jeton d'accès + cookie de rafraîchissement `HttpOnly` ; `GET /auth/me` renvoie l'utilisateur et son tenant.
-  - [ ] Les réponses pour compte inconnu, mot de passe faux et tenant inconnu sont identiques (corps et statut).
-  - [ ] Rotation : un jeton de rafraîchissement utilisé une fois ne fonctionne plus ; sa réutilisation hors fenêtre de grâce révoque toute la famille et crée un événement d'audit.
-  - [ ] Fenêtre de grâce : le rejeu immédiat du jeton précédent ne déconnecte pas l'utilisateur (test) ; la fenêtre est paramétrable.
-  - [ ] Après N échecs, le délai imposé augmente (test avec horloge simulée) ; la limitation de débit répond `429 RATE_LIMITED`.
-  - [ ] Aucun mot de passe, hachage ni jeton dans les réponses et les journaux (test sur la sortie des journaux).
-  - [ ] Jeton d'accès expiré, mal signé, ou portant un tenant modifié : `401`.
-  - [ ] **CC-1 :** un jeton du tenant B ne permet d'obtenir par `/auth/me` aucune donnée de A ; un jeton de rafraîchissement de A présenté dans le contexte de B est refusé.
-  - [ ] **CC-2 (partie authentification) :** toute route non marquée publique répond `401` sans jeton — test générique parcourant toutes les routes enregistrées.
-  - [ ] Événements d'audit : connexion réussie, échec sur compte connu, déconnexion, révocation de famille (CC-3).
-  - [ ] Fonctionnement du cookie vérifié en développement (origines 5173/3000) et documenté pour un déploiement derrière reverse proxy.
-  - [ ] Écran de connexion en FR et EN, états de chargement et d'erreur (CC-4) ; CC-5, CC-6, CC-7.
+  - [x] Connexion valide : jeton d'accès + cookie de rafraîchissement `HttpOnly` ; `GET /auth/me` renvoie l'utilisateur et son tenant.
+  - [x] Les réponses pour compte inconnu, mot de passe faux et tenant inconnu sont identiques (corps et statut).
+  - [x] Rotation : un jeton de rafraîchissement utilisé une fois ne fonctionne plus ; sa réutilisation hors fenêtre de grâce révoque toute la famille et crée un événement d'audit.
+  - [x] Fenêtre de grâce : le rejeu immédiat du jeton précédent ne déconnecte pas l'utilisateur (test) ; la fenêtre est paramétrable.
+  - [x] Après N échecs, le délai imposé augmente (test avec horloge simulée) ; la limitation de débit répond `429 RATE_LIMITED`.
+  - [x] Aucun mot de passe, hachage ni jeton dans les réponses et les journaux (test sur la sortie des journaux).
+  - [x] Jeton d'accès expiré, mal signé, ou portant un tenant modifié : `401`.
+  - [x] **CC-1 :** un jeton du tenant B ne permet d'obtenir par `/auth/me` aucune donnée de A ; un jeton de rafraîchissement de A présenté dans le contexte de B est refusé.
+  - [x] **CC-2 (partie authentification) :** toute route non marquée publique répond `401` sans jeton — test générique parcourant toutes les routes enregistrées.
+  - [x] Événements d'audit : connexion réussie, échec sur compte connu, déconnexion, révocation de famille (CC-3).
+  - [x] Fonctionnement du cookie vérifié en développement (origines 5173/3000) et documenté pour un déploiement derrière reverse proxy.
+  - [x] Écran de connexion en FR et EN, états de chargement et d'erreur (CC-4) ; CC-5, CC-6, CC-7.
+- **Livré le 2026-11-13** sur la décision D-12 (code d'organisation). Écart : dans la fenêtre de grâce, un nouveau successeur est émis au lieu du même (ADR 0003). Reste à faire consigné dans l'ADR (purge des sessions expirées, re-hachage, mots de passe courants).
 
 ### P1-05 — RBAC : rôles, permissions, refus par défaut, harnais de tests
 

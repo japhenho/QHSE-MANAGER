@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { RouteObject } from 'react-router-dom';
 import { LoadingState } from '../components/ui';
 import { AppShell } from './AppShell';
+import { RequireAuth } from './RequireAuth';
 import { ROUTES } from './navigation';
 import { RouteError } from './RouteError';
 
@@ -25,20 +26,32 @@ function lazyPage(load: () => Promise<{ default: ComponentType }>) {
 /** Route table shared by the browser router and the tests (memory router). */
 export const routes: RouteObject[] = [
   {
-    element: <AppShell />,
+    path: ROUTES.login,
+    ErrorBoundary: RouteError,
+    ...lazyPage(() => import('../features/login/LoginPage')),
+  },
+  {
+    // Everything below requires a session.
+    element: <RequireAuth />,
     ErrorBoundary: RouteError,
     HydrateFallback: PageLoading,
     children: [
       {
-        // Page-level boundary: a failing page keeps the shell and its navigation usable.
+        element: <AppShell />,
         ErrorBoundary: RouteError,
         children: [
-          { path: ROUTES.home, ...lazyPage(() => import('../features/home/HomePage')) },
           {
-            path: ROUTES.systemStatus,
-            ...lazyPage(() => import('../features/system-status/SystemStatusPage')),
+            // Page-level boundary: a failing page keeps the shell and its navigation usable.
+            ErrorBoundary: RouteError,
+            children: [
+              { path: ROUTES.home, ...lazyPage(() => import('../features/home/HomePage')) },
+              {
+                path: ROUTES.systemStatus,
+                ...lazyPage(() => import('../features/system-status/SystemStatusPage')),
+              },
+              { path: '*', ...lazyPage(() => import('../features/not-found/NotFoundPage')) },
+            ],
           },
-          { path: '*', ...lazyPage(() => import('../features/not-found/NotFoundPage')) },
         ],
       },
     ],

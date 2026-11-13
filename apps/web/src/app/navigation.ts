@@ -7,6 +7,7 @@ import type { Translation } from '../i18n/locales';
  */
 export const ROUTES = {
   home: '/',
+  login: '/login',
   systemStatus: '/system-status',
 } as const;
 
@@ -18,7 +19,7 @@ type NavLabelKey = `nav.${Exclude<keyof Translation['nav'], 'label' | 'openMenu'
 export interface NavItem {
   /** Stable identifier (analytics, tests, future permission checks). */
   readonly id: string;
-  readonly path: RoutePath;
+  readonly path: Exclude<RoutePath, typeof ROUTES.login>;
   /** Translation key of the label — never a literal string. */
   readonly labelKey: NavLabelKey;
   readonly icon: IconComponent;

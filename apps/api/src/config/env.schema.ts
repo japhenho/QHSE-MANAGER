@@ -55,6 +55,36 @@ export const envSchema = z.object({
   DATABASE_URL: z
     .string({ error: 'is required' })
     .refine(isPostgresUrl, { message: 'must be a valid postgresql:// connection URL' }),
+  /** Number of reverse proxies in front of the API (0 = none). Needed for the client IP. */
+  API_TRUST_PROXY: z.preprocess(emptyToUndefined, z.coerce.number().int().min(0).max(5).default(0)),
+  /** Signing key of access tokens. A secret: at least 32 characters, never committed. */
+  AUTH_JWT_SECRET: z.string({ error: 'is required' }).min(32, 'must be at least 32 characters'),
+  /** Previous signing key, still accepted for verification during a key rotation. */
+  AUTH_JWT_SECRET_PREVIOUS: z.preprocess(
+    emptyToUndefined,
+    z.string().min(32, 'must be at least 32 characters').optional(),
+  ),
+  AUTH_ACCESS_TOKEN_TTL_SECONDS: z.preprocess(
+    emptyToUndefined,
+    z.coerce.number().int().min(60).max(3600).default(900),
+  ),
+  /** Absolute lifetime of a session, whatever the activity. */
+  AUTH_SESSION_MAX_DAYS: z.preprocess(
+    emptyToUndefined,
+    z.coerce.number().int().min(1).max(365).default(30),
+  ),
+  /** A session ends after this many days without refresh. */
+  AUTH_REFRESH_IDLE_DAYS: z.preprocess(
+    emptyToUndefined,
+    z.coerce.number().int().min(1).max(365).default(7),
+  ),
+  /** Seconds during which replaying the previous refresh token is tolerated (0 disables). */
+  AUTH_REFRESH_GRACE_SECONDS: z.preprocess(
+    emptyToUndefined,
+    z.coerce.number().int().min(0).max(60).default(10),
+  ),
+  /** `Secure` attribute of the refresh cookie. Unset: true when NODE_ENV=production. */
+  AUTH_COOKIE_SECURE: z.preprocess(emptyToUndefined, booleanFlag.optional()),
   /** Maximum connections of the API pool. Every tenant transaction holds one while it runs. */
   DATABASE_POOL_MAX: z.preprocess(
     emptyToUndefined,
@@ -73,6 +103,14 @@ export interface Env {
   readonly LOG_LEVEL: (typeof LOG_LEVELS)[number];
   readonly DATABASE_URL: string;
   readonly DATABASE_POOL_MAX: number;
+  readonly API_TRUST_PROXY: number;
+  readonly AUTH_JWT_SECRET: string;
+  readonly AUTH_JWT_SECRET_PREVIOUS: string | undefined;
+  readonly AUTH_ACCESS_TOKEN_TTL_SECONDS: number;
+  readonly AUTH_SESSION_MAX_DAYS: number;
+  readonly AUTH_REFRESH_IDLE_DAYS: number;
+  readonly AUTH_REFRESH_GRACE_SECONDS: number;
+  readonly AUTH_COOKIE_SECURE: boolean;
 }
 
 export class EnvValidationError extends Error {
@@ -111,6 +149,14 @@ export function validateEnv(raw: Record<string, string | undefined>): Env {
     LOG_LEVEL: parsed.LOG_LEVEL ?? (parsed.NODE_ENV === 'test' ? 'silent' : 'info'),
     DATABASE_URL: parsed.DATABASE_URL,
     DATABASE_POOL_MAX: parsed.DATABASE_POOL_MAX,
+    API_TRUST_PROXY: parsed.API_TRUST_PROXY,
+    AUTH_JWT_SECRET: parsed.AUTH_JWT_SECRET,
+    AUTH_JWT_SECRET_PREVIOUS: parsed.AUTH_JWT_SECRET_PREVIOUS,
+    AUTH_ACCESS_TOKEN_TTL_SECONDS: parsed.AUTH_ACCESS_TOKEN_TTL_SECONDS,
+    AUTH_SESSION_MAX_DAYS: parsed.AUTH_SESSION_MAX_DAYS,
+    AUTH_REFRESH_IDLE_DAYS: parsed.AUTH_REFRESH_IDLE_DAYS,
+    AUTH_REFRESH_GRACE_SECONDS: parsed.AUTH_REFRESH_GRACE_SECONDS,
+    AUTH_COOKIE_SECURE: parsed.AUTH_COOKIE_SECURE ?? parsed.NODE_ENV === 'production',
   });
 }
 

@@ -4,9 +4,23 @@ import { createMemoryRouter } from 'react-router-dom';
 import { App } from '../app/App';
 import { routes } from '../app/routes';
 import { createQueryClient } from '../lib/api';
+import { type AuthState, setAuthStateForTests } from '../lib/auth';
 
-/** Renders the real application (shell, routes, providers) at the given URL. */
-export function renderApp(initialPath = '/') {
+/** Demo identity used by tests that need a signed-in user. */
+export const TEST_IDENTITY = {
+  user: { id: '0193a000-0000-7000-8000-000000000001', email: 'demo.user@example.test' },
+  tenant: { id: '0193a000-0000-7000-8000-0000000000aa', slug: 'demo-org', name: 'Demo Org (DEMO)' },
+};
+
+/**
+ * Renders the real application (shell, routes, providers) at the given URL.
+ * Signed in by default; pass `auth` to start anonymous or still loading.
+ */
+export function renderApp(
+  initialPath = '/',
+  auth: AuthState = { status: 'authenticated', identity: TEST_IDENTITY },
+) {
+  setAuthStateForTests(auth, auth.status === 'authenticated' ? 'test-access-token' : undefined);
   const router = createMemoryRouter(routes, { initialEntries: [initialPath] });
   const queryClient = createQueryClient();
   const user = userEvent.setup();

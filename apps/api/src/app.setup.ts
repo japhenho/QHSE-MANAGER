@@ -1,4 +1,5 @@
 import { type INestApplication, VersioningType } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
@@ -18,6 +19,8 @@ export function configureApp(app: INestApplication): Env {
   const env = app.get<Env>(ENV);
 
   app.useLogger(app.get(Logger));
+  // Client IP behind reverse proxies (rate limiting, audit). 0 = trust no proxy header.
+  (app as NestExpressApplication).set('trust proxy', env.API_TRUST_PROXY);
   app.use(requestIdMiddleware);
   app.use(helmet());
   app.enableCors({
@@ -37,6 +40,7 @@ export function configureApp(app: INestApplication): Env {
       .setTitle('QHSE Manager API')
       .setDescription('REST API of the QHSE Manager platform.')
       .setVersion(DEFAULT_API_VERSION)
+      .addBearerAuth()
       .build();
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup(DOCS_PATH, app, document, {

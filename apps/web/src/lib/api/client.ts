@@ -13,6 +13,29 @@ export interface ApiFetchOptions {
   /** Caller cancellation (TanStack Query passes one to every query function). */
   signal?: AbortSignal;
   timeoutMs?: number;
+  /** Sends and accepts cookies. Only the session endpoints need it (refresh cookie). */
+  withCredentials?: boolean;
+  /**
+   * False for calls that must not carry the access token nor trigger a session renewal
+   * (the session endpoints themselves, public probes). Default: true.
+   */
+  authenticated?: boolean;
+}
+
+/**
+ * How the client obtains the access token and renews an expired session. Registered by
+ * the auth module (`lib/auth/session`); the API layer itself stores nothing.
+ */
+export interface AuthBridge {
+  getAccessToken(): string | undefined;
+  /** Tries to renew the session; resolves to the new access token, or undefined. */
+  renewSession(): Promise<string | undefined>;
+}
+
+let authBridge: AuthBridge | undefined;
+
+export function registerAuthBridge(bridge: AuthBridge | undefined): void {
+  authBridge = bridge;
 }
 
 export interface ApiFetchParsedOptions<T> extends ApiFetchOptions {
@@ -59,6 +82,26 @@ export async function apiFetch<T>(
   path: string,
   options: ApiFetchOptions & { parse?: (data: unknown) => T } = {},
 ): Promise<unknown> {
+  const useSession = options.authenticated !== false && authBridge !== undefined;
+  if (!useSession) return request(path, options, undefined);
+
+  const token = authBridge?.getAccessToken();
+  try {
+    return await request(path, options, token);
+  } catch (error) {
+    // The access token is short-lived: on a 401, renew the session once and replay.
+    if (!(error instanceof ApiRequestError) || error.status !== 401) throw error;
+    const renewed = await authBridge?.renewSession();
+    if (renewed === undefined) throw error;
+    return request(path, options, renewed);
+  }
+}
+
+async function request<T>(
+  path: string,
+  options: ApiFetchOptions & { parse?: (data: unknown) => T },
+  accessToken: string | undefined,
+): Promise<unknown> {
   const { method = 'GET', body, headers, signal, timeoutMs = DEFAULT_TIMEOUT_MS, parse } = options;
   const url = buildUrl(path);
 
@@ -82,8 +125,10 @@ export async function apiFetch<T>(
           Accept: 'application/json',
           'Accept-Language': getCurrentLocale(),
           ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+          ...(accessToken !== undefined ? { Authorization: `Bearer ${accessToken}` } : {}),
           ...headers,
         },
+        ...(options.withCredentials ? { credentials: 'include' as const } : {}),
         body: body !== undefined ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });

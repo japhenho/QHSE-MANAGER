@@ -26,6 +26,9 @@ export interface ScopeRule {
 export const TENANT_SCOPE: Readonly<Record<Prisma.ModelName, ScopeRule>> = {
   Tenant: { tenantField: 'id', writable: false },
   User: { tenantField: 'tenantId', tenantRelation: 'tenant', writable: true },
+  AuthSession: { tenantField: 'tenantId', tenantRelation: 'tenant', writable: true },
+  RefreshToken: { tenantField: 'tenantId', tenantRelation: 'tenant', writable: true },
+  LoginThrottle: { tenantField: 'tenantId', tenantRelation: 'tenant', writable: true },
   AuditEvent: {
     tenantField: 'tenantId',
     tenantRelation: 'tenant',

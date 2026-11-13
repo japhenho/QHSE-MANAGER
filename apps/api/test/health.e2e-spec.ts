@@ -98,10 +98,9 @@ describe('Health and HTTP foundation (e2e, real database)', () => {
   it('exposes the OpenAPI document and Swagger UI outside production', async () => {
     const json = await request(app.getHttpServer()).get('/api/docs-json').expect(200);
     expect(json.body.openapi).toMatch(/^3\./);
-    expect(Object.keys(json.body.paths).sort()).toEqual([
-      '/api/v1/health/live',
-      '/api/v1/health/ready',
-    ]);
+    expect(Object.keys(json.body.paths)).toEqual(
+      expect.arrayContaining(['/api/v1/health/live', '/api/v1/health/ready']),
+    );
 
     const ui = await request(app.getHttpServer()).get('/api/docs').expect(200);
     expect(ui.headers['content-type']).toMatch(/text\/html/);

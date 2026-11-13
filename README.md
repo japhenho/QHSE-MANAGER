@@ -47,8 +47,22 @@ pnpm build
 pnpm tenant:create --slug acme-congo --name "ACME Congo"
 ```
 
-La commande s'exécute sur le serveur avec le rôle propriétaire (`MIGRATION_DATABASE_URL`) et affiche le tenant créé en JSON. Aucun endpoint de l'API ne permet de créer ou de lister des tenants.
-`pnpm --filter @qhse/api prisma:migrate` crée une nouvelle migration en développement.
+Les commandes s'exécutent sur le serveur avec le rôle propriétaire (`MIGRATION_DATABASE_URL`). Aucun endpoint de l'API ne permet de créer ou de lister des tenants.
+
+Créer ensuite le premier compte de ce tenant. Le mot de passe (12 caractères au minimum) est lu sur l'entrée standard, jamais en argument :
+
+```bash
+printf '%s' "$MOT_DE_PASSE" | pnpm user:create --organization acme-congo --email admin@acme.example
+```
+
+L'utilisateur se connecte sur le web avec le code d'organisation (`acme-congo`), son adresse e-mail et son mot de passe.
+
+### Authentification en production
+
+- Définir `AUTH_JWT_SECRET` (secret d'au moins 32 caractères, propre à l'environnement).
+- Servir le web et l'API sur le même site, en HTTPS, derrière le reverse proxy ; renseigner `API_CORS_ORIGINS` et `API_TRUST_PROXY`.
+- Le jeton de rafraîchissement est un cookie `HttpOnly`, `SameSite=Strict`, `Secure` en production. Détails : `docs/adr/0003-authentification-et-sessions.md`.
+  `pnpm --filter @qhse/api prisma:migrate` crée une nouvelle migration en développement.
 
 ## Contrôles
 

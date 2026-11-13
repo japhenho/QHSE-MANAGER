@@ -13,7 +13,12 @@ export const healthQueryKey = (probe: HealthProbe) => ['health', probe] as const
  * deliberately ignored so this page does not depend on the exact payload of the API.
  */
 async function fetchHealth(probe: HealthProbe, signal: AbortSignal): Promise<true> {
-  await apiFetch(`/health/${probe}`, { signal, timeoutMs: HEALTH_TIMEOUT_MS });
+  // Public probes: no access token, no session renewal.
+  await apiFetch(`/health/${probe}`, {
+    signal,
+    timeoutMs: HEALTH_TIMEOUT_MS,
+    authenticated: false,
+  });
   return true;
 }
 

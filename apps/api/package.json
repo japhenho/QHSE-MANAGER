@@ -19,17 +19,20 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
-    "tenant:create": "node dist/cli/create-tenant.js"
+    "tenant:create": "node dist/cli/create-tenant.js",
+    "user:create": "node dist/cli/create-user.js"
   },
   "dependencies": {
     "@nestjs/common": "^12.5.0",
     "@nestjs/core": "^12.5.0",
     "@nestjs/platform-express": "^12.5.0",
     "@nestjs/swagger": "^12.1.2",
+    "@node-rs/argon2": "^2.2.2",
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
     "@qhse/shared": "workspace:*",
     "helmet": "^8.3.0",
+    "jose": "^6.2.17",
     "nestjs-pino": "^5.3.1",
     "pg": "^8.23.1",
     "pino-http": "^11.0.0",

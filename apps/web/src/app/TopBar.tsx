@@ -1,6 +1,7 @@
 import type { RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Badge, MenuIcon, WifiOffIcon } from '../components/ui';
+import { Badge, Button, MenuIcon, WifiOffIcon } from '../components/ui';
+import { signOut, useAuth } from '../lib/auth';
 import { useOnlineStatus } from '../lib/hooks/useOnlineStatus';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { SIDEBAR_ID } from './Sidebar';
@@ -14,6 +15,8 @@ interface TopBarProps {
 export function TopBar({ drawerOpen, onOpenDrawer, menuButtonRef }: TopBarProps) {
   const { t } = useTranslation();
   const online = useOnlineStatus();
+  const auth = useAuth();
+  const identity = auth.status === 'authenticated' ? auth.identity : undefined;
 
   return (
     <header className="sticky top-0 z-20 flex min-h-16 items-center gap-2 border-b border-line bg-surface px-3 sm:px-6">
@@ -39,7 +42,21 @@ export function TopBar({ drawerOpen, onOpenDrawer, menuButtonRef }: TopBarProps)
             </Badge>
           )}
         </div>
+        {identity ? (
+          <p
+            className="hidden min-w-0 flex-col text-right leading-tight md:flex"
+            title={t('auth.signedInAs', { email: identity.user.email })}
+          >
+            <span className="truncate font-semibold text-fg">{identity.tenant.name}</span>
+            <span className="truncate font-mono text-sm text-fg-muted">{identity.user.email}</span>
+          </p>
+        ) : null}
         <LanguageSwitcher />
+        {identity ? (
+          <Button variant="secondary" onClick={() => void signOut()}>
+            {t('auth.signOut')}
+          </Button>
+        ) : null}
       </div>
     </header>
   );
