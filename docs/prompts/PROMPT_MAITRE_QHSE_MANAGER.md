@@ -241,6 +241,18 @@ Après un lot terminé, **enchaîne sur le lot suivant du backlog sans attendre*
 
 Si une décision en attente ne bloque qu'une partie du backlog, consigne-la dans `docs/DECISIONS-OUVERTES.md` et avance sur les lots qui n'en dépendent pas. Pour une préférence mineure (nommage, style, cosmétique), choisis une convention cohérente, documente-la et continue.
 
+### Travail à plusieurs agents en parallèle
+Lorsque l'utilisateur demande de paralléliser, tu deviens **l'orchestrateur** : tu restes seul responsable du résultat intégré.
+
+- **Socle d'abord, seul :** fichiers racine, dépendances, lockfile, schéma de base partagé et contrats (`packages/shared`, formats d'erreur, routes) sont posés et commités avant tout lancement d'agents.
+- **Découpage sans recouvrement :** chaque agent reçoit un périmètre de fichiers exclusif (un dossier d'application, un module métier, la documentation). Deux agents ne modifient jamais le même fichier.
+- **Ressources partagées sérialisées :** le schéma Prisma et les migrations, le lockfile, les fichiers racine, la configuration de navigation et les fichiers i18n communs ne sont modifiés que par l'orchestrateur, ou par un seul agent à la fois. Si deux lots ont besoin d'une migration, ils ne sont pas parallèles — ou chacun travaille dans un worktree Git isolé et l'orchestrateur fusionne dans l'ordre.
+- **Consigne complète par agent :** objectif, périmètre de fichiers autorisé, contrats à respecter, critères d'acceptation, commandes de preuve à exécuter, format du rapport. Un agent ne connaît rien de la conversation : tout ce dont il a besoin est dans sa consigne ou dans le dépôt.
+- **Git réservé à l'orchestrateur :** les agents ne font ni commit ni push sur la branche commune.
+- **Intégration vérifiée :** un rapport d'agent est une déclaration, pas une preuve. Après chaque vague, l'orchestrateur relit le diff, relance lint, typecheck, tests et build sur l'ensemble du dépôt, vérifie le parcours de bout en bout, corrige les incohérences entre périmètres, puis commite.
+- **Ce qui se parallélise bien :** API et écran d'un même lot une fois le contrat figé ; modules métier indépendants une fois les fondations (tenant, auth, RBAC, audit) vérifiées ; documentation ; tests. **Ce qui ne se parallélise pas :** les fondations de sécurité elles-mêmes, et tout ce qui touche la même table.
+- `docs/BACKLOG.md` indique pour chaque lot s'il est parallélisable et avec lesquels.
+
 # 8. PHASES DE LIVRAISON
 
 Ordre général, à adapter à l'état réel du dépôt. Chaque phase se termine par ses critères de sortie et une validation humaine.
