@@ -12,7 +12,8 @@ Mis à jour à chaque itération. Dernière mise à jour : 2026-11-13.
 - `packages/shared` : enveloppe d'erreur et codes stables, schéma de pagination avec limite serveur, locales.
 - `apps/api` : préfixe `/api/v1`, configuration validée au démarrage, helmet, CORS par liste blanche, logs JSON avec identifiant de requête et masquage des en-têtes sensibles, filtre d'erreurs global, pipe de validation zod, Prisma (aucun modèle), `health/live` et `health/ready`, OpenAPI sur `/api/docs`.
 - `apps/web` : shell responsive (barre latérale, tiroir mobile), navigation pilotée par une configuration typée, jetons de design, primitives UI, i18n FR/EN, couche d'appel API typée, page « État du système ».
-- Cadrage : `docs/BACKLOG.md` (Phases 1 et 2 détaillées), `docs/DECISIONS-OUVERTES.md` (D-01 à D-13), ADR 0001 à 0005.
+- Direction visuelle « Salle de contrôle » (modèle A) appliquée au socle web : jetons sombres, polices embarquées, test de contraste (ADR 0006).
+- Cadrage : `docs/BACKLOG.md` (Phases 1 et 2 détaillées), `docs/DECISIONS-OUVERTES.md` (D-01 à D-13), ADR 0001 à 0006, maquettes dans `docs/maquettes/`.
 
 Preuves du 2026-11-13 (commandes lancées à la racine) :
 
