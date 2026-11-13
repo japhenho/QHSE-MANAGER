@@ -1,6 +1,6 @@
 # ADR 0002 — Stratégie multi-tenant : `tenant_id`, filtrage applicatif centralisé et Row-Level Security
 
-- **Statut :** Proposé (2026-11-13) — en attente de la décision **D-02** (modèle d'isolation) et, pour la table des utilisateurs, de **D-12**. Le mécanisme décrit doit en outre être confirmé par le spike du lot **P1-02** avant de passer à « Accepté ».
+- **Statut :** Accepté (2026-11-13). Décision **D-02** tranchée par le porteur du projet : base partagée. Mécanisme confirmé par le lot **P1-02** (voir « Résultats du lot P1-02 »). La contrainte d'unicité de l'e-mail reste provisoire tant que **D-12** n'est pas tranchée.
 - **Références :** prompt maître, section 4.3 ; `docs/DECISIONS-OUVERTES.md` (D-02, D-12, D-13).
 
 ## Contexte
@@ -66,6 +66,21 @@ Le même code sert un SaaS multi-entreprises et des installations privées. Une 
 ### 7. On-premise
 
 Même code, même schéma, RLS active, **un seul tenant** créé à l'installation. Aucun chemin de code « mono-tenant » particulier : cela évite deux comportements à tester.
+
+## Résultats du lot P1-02
+
+Vérifié avec Prisma 7.10, `@prisma/adapter-pg`, PostgreSQL 16, par les tests d'intégration `apps/api/test/tenant-*.e2e-spec.ts`.
+
+- **Variante retenue pour le § 5 : une transaction par unité de travail**, ni par requête HTTP ni par opération. Le code métier appelle `TenantDatabase.run(fn)` : une transaction interactive Prisma est ouverte, `set_config('app.tenant_id', …, true)` y est exécuté, puis `fn` reçoit un client dont chaque opération est réécrite par la couche 1. Raisons : écritures atomiques par défaut, connexion rendue au pool dès la fin de l'unité de travail, aucune composition implicite entre transactions.
+- **Le client transactionnel hérite bien de l'extension `$extends`** : la couche 1 s'applique à l'intérieur de la transaction.
+- **Pas de fuite par le pool** : 240 unités de travail entrelacées de deux tenants sur un pool de 2 connexions, aucune ligne ni liaison de l'autre tenant ; entre deux lots, une connexion du pool ne porte aucun tenant. La liaison disparaît au `COMMIT` comme au `ROLLBACK`.
+- **Échec fermé** : sans tenant, zéro ligne lue et écriture refusée ; une valeur malformée provoque une erreur. Le client brut (`PrismaService`) ne voit aucune ligne des tables à portée tenant.
+- **Clés étrangères composites** : Prisma génère un index unique `(tenant_id, id)` que PostgreSQL accepte comme cible d'une clé étrangère composite ; une référence vers une ligne d'un autre tenant est refusée (`23503`).
+- **Table `tenants`** : RLS activée mais **non forcée**. Le rôle d'exécution ne lit que sa propre ligne et ne peut ni créer, ni modifier, ni supprimer un tenant ; le rôle propriétaire (commande de provisionnement) n'y est pas soumis. Aucun nom de rôle n'est écrit dans les migrations.
+- **Politique unique** : la fonction SQL `app_current_tenant_id()` porte la lecture du paramètre ; toutes les politiques l'utilisent, et le test de catalogue exige exactement la politique `tenant_isolation` sur toute table possédant `tenant_id`.
+- **Couche 1** (`tenant-scope.ts`) : couvre `find*`, `count`, `aggregate`, `groupBy`, `create*`, `update*`, `delete*`, `upsert`. Toute autre opération est refusée. **Non couvert par la couche 1 :** filtres et écritures imbriqués sur des relations, SQL brut ; ils restent couverts par la RLS et les clés composites. Le type `Record<ModelName, …>` fait échouer la compilation si un modèle est ajouté sans règle.
+- **Surcoût mesuré** (boucle locale, 500 itérations, PostgreSQL sur la même machine) : requête brute 0,43 ms ; unité de travail avec une requête 1,97 ms ; avec une liste de 20 lignes 2,67 ms ; avec trois requêtes 4,11 ms. Soit environ 1,5 ms fixes par unité de travail (`BEGIN`, `set_config`, `COMMIT`). Sur un réseau réel, ce surcoût vaut trois allers-retours vers la base : regrouper les lectures d'un même traitement dans une seule unité de travail.
+- **Reste à faire dans les lots suivants :** le garde global qui établit le contexte à partir de la session (P1-04) ; la résolution du tenant à la connexion, avant qu'un contexte existe (P1-04, D-12) ; la taille du pool (`DATABASE_POOL_MAX`, 10 par défaut) à dimensionner en charge (Phase 7).
 
 ## Alternatives envisagées
 

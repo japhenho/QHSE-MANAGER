@@ -55,6 +55,11 @@ export const envSchema = z.object({
   DATABASE_URL: z
     .string({ error: 'is required' })
     .refine(isPostgresUrl, { message: 'must be a valid postgresql:// connection URL' }),
+  /** Maximum connections of the API pool. Every tenant transaction holds one while it runs. */
+  DATABASE_POOL_MAX: z.preprocess(
+    emptyToUndefined,
+    z.coerce.number().int().min(1).max(200).default(10),
+  ),
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
@@ -67,6 +72,7 @@ export interface Env {
   readonly API_DOCS_ENABLED: boolean;
   readonly LOG_LEVEL: (typeof LOG_LEVELS)[number];
   readonly DATABASE_URL: string;
+  readonly DATABASE_POOL_MAX: number;
 }
 
 export class EnvValidationError extends Error {
@@ -104,6 +110,7 @@ export function validateEnv(raw: Record<string, string | undefined>): Env {
     API_DOCS_ENABLED: parsed.API_DOCS_ENABLED ?? parsed.NODE_ENV !== 'production',
     LOG_LEVEL: parsed.LOG_LEVEL ?? (parsed.NODE_ENV === 'test' ? 'silent' : 'info'),
     DATABASE_URL: parsed.DATABASE_URL,
+    DATABASE_POOL_MAX: parsed.DATABASE_POOL_MAX,
   });
 }
 

@@ -34,7 +34,7 @@ Chaque lot doit satisfaire, en plus de ses critères propres :
 | ID    | Titre                                                             | Dépend de        | Décisions                   | //  | Statut         |
 | ----- | ----------------------------------------------------------------- | ---------------- | --------------------------- | --- | -------------- |
 | P1-01 | Socle base de données : rôles PostgreSQL et harnais d'intégration | Socle Phase 0    | —                           | SEQ | Livré          |
-| P1-02 | Tenants et mécanisme d'isolation (application + RLS)              | P1-01            | D-02, D-12, D-13            | SEQ | Partiel (D-02) |
+| P1-02 | Tenants et mécanisme d'isolation (application + RLS)              | P1-01            | D-02, D-12, D-13            | SEQ | Livré          |
 | P1-03 | Journal d'audit en ajout seul                                     | P1-02            | D-06 (purge seulement)      | SEQ | À faire        |
 | P1-04 | Authentification : connexion, rafraîchissement, déconnexion       | P1-03            | D-12                        | SEQ | Partiel (D-12) |
 | P1-05 | RBAC : rôles, permissions, refus par défaut, harnais de tests     | P1-04            | D-05 (contenu des rôles)    | SEQ | À faire        |
@@ -90,16 +90,17 @@ Chaque lot doit satisfaire, en plus de ses critères propres :
   3. Politique RLS, `ENABLE` + `FORCE`, clés étrangères composites.
   4. Commande d'administration de création d'un tenant (D-13, option A).
 - **Critères d'acceptation.**
-  - [ ] Barrière 2 seule : avec le rôle d'exécution et **sans passer par la couche applicative** (SQL direct), une session positionnée sur le tenant A ne voit, ne modifie et ne supprime aucune ligne de B ; l'insertion d'une ligne portant le `tenant_id` de B est refusée.
-  - [ ] Échec fermé : sans tenant positionné, une lecture renvoie zéro ligne et une écriture est refusée.
-  - [ ] Barrière 1 seule : le client à portée tenant écrase tout `tenant_id` fourni par l'appelant et filtre lectures, mises à jour et archivages ; un accès hors contexte lève une erreur.
-  - [ ] Pas de fuite par le pool : test de concurrence alternant au moins 200 requêtes de deux tenants sur un pool limité à 2 connexions, sans aucune ligne de l'autre tenant.
-  - [ ] Test de catalogue : échoue si une table possédant `tenant_id` n'a pas la RLS activée et forcée avec la politique attendue (réutilisé par CC-5).
-  - [ ] Test d'architecture ou règle de lint : l'import du client Prisma brut hors du module `tenancy` fait échouer la vérification.
-  - [ ] Une clé étrangère vers une ligne d'un autre tenant est refusée par la base.
-  - [ ] La commande de création de tenant est documentée et testée ; aucun endpoint HTTP ne permet de créer ou de lister des tenants.
-  - [ ] Surcoût mesuré de la variante retenue consigné dans l'ADR 0002 ; statut de l'ADR mis à jour.
-  - [ ] CC-5, CC-6.
+  - [x] Barrière 2 seule : avec le rôle d'exécution et **sans passer par la couche applicative** (SQL direct), une session positionnée sur le tenant A ne voit, ne modifie et ne supprime aucune ligne de B ; l'insertion d'une ligne portant le `tenant_id` de B est refusée.
+  - [x] Échec fermé : sans tenant positionné, une lecture renvoie zéro ligne et une écriture est refusée.
+  - [x] Barrière 1 seule : le client à portée tenant écrase tout `tenant_id` fourni par l'appelant et filtre lectures, mises à jour et archivages ; un accès hors contexte lève une erreur.
+  - [x] Pas de fuite par le pool : test de concurrence alternant au moins 200 requêtes de deux tenants sur un pool limité à 2 connexions, sans aucune ligne de l'autre tenant.
+  - [x] Test de catalogue : échoue si une table possédant `tenant_id` n'a pas la RLS activée et forcée avec la politique attendue (réutilisé par CC-5).
+  - [x] Test d'architecture ou règle de lint : l'import du client Prisma brut hors du module `tenancy` fait échouer la vérification.
+  - [x] Une clé étrangère vers une ligne d'un autre tenant est refusée par la base.
+  - [x] La commande de création de tenant est documentée et testée ; aucun endpoint HTTP ne permet de créer ou de lister des tenants.
+  - [x] Surcoût mesuré de la variante retenue consigné dans l'ADR 0002 ; statut de l'ADR mis à jour.
+  - [x] CC-5, CC-6.
+- **Livré le 2026-11-13** sur la décision D-02 (base partagée) et les hypothèses provisoires D-12 et D-13. Variante retenue : une transaction par unité de travail (`TenantDatabase.run`). Le garde HTTP qui établit le contexte tenant à partir de la session relève de P1-04.
 
 ### P1-03 — Journal d'audit en ajout seul
 

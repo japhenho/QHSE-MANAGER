@@ -20,7 +20,8 @@
     "build:shared": "pnpm --filter @qhse/shared build",
     "test:e2e": "pnpm build:shared && pnpm --filter @qhse/api run test:e2e",
     "db:init": "bash infra/postgres/db-init.sh",
-    "db:migrate": "pnpm --filter @qhse/api run prisma:deploy"
+    "db:migrate": "pnpm --filter @qhse/api run prisma:deploy",
+    "tenant:create": "pnpm --filter @qhse/api --silent run tenant:create"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

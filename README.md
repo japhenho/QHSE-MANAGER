@@ -38,7 +38,17 @@ Sans Docker, ou sur un serveur PostgreSQL existant, créer les rôles et les bas
 PGHOST=localhost PGPORT=5432 PGUSER=postgres PGPASSWORD=... DB_OWNER_PASSWORD=... DB_APP_PASSWORD=... pnpm db:init
 ```
 
-Le script est rejouable. `pnpm --filter @qhse/api prisma:migrate` crée une nouvelle migration en développement.
+Le script est rejouable.
+
+### Créer un tenant
+
+```bash
+pnpm build
+pnpm tenant:create --slug acme-congo --name "ACME Congo"
+```
+
+La commande s'exécute sur le serveur avec le rôle propriétaire (`MIGRATION_DATABASE_URL`) et affiche le tenant créé en JSON. Aucun endpoint de l'API ne permet de créer ou de lister des tenants.
+`pnpm --filter @qhse/api prisma:migrate` crée une nouvelle migration en développement.
 
 ## Contrôles
 

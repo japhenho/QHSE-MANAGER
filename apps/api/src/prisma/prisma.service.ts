@@ -19,6 +19,12 @@ function schemaOf(databaseUrl: string): string | undefined {
   return new URL(databaseUrl).searchParams.get('schema') ?? undefined;
 }
 
+/**
+ * Raw database client. It connects with the runtime role and carries NO tenant: on
+ * tenant-scoped tables it sees zero rows (Row-Level Security fails closed).
+ * Business code must never inject it — use `TenantDatabase` from the tenancy module.
+ * An architecture test enforces this.
+ */
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
@@ -26,7 +32,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   constructor(@Inject(ENV) env: Env) {
     super({
       adapter: new PrismaPg(
-        { connectionString: env.DATABASE_URL, connectionTimeoutMillis: CONNECTION_TIMEOUT_MS },
+        {
+          connectionString: env.DATABASE_URL,
+          connectionTimeoutMillis: CONNECTION_TIMEOUT_MS,
+          max: env.DATABASE_POOL_MAX,
+        },
         { schema: schemaOf(env.DATABASE_URL) },
       ),
     });

@@ -1,0 +1,54 @@
+// Tenancy domain: the tenant registry and the first tenant-scoped table.
+// Row-Level Security policies are written in SQL inside the migrations (ADR 0002).
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+
+  @@map("tenant_status")
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+
+  @@map("user_status")
+}
+
+/// A client organisation. Not tenant-scoped itself: the runtime role can only read
+/// its own row, and rows are created by the provisioning command, never by the API.
+model Tenant {
+  id        String       @id @db.Uuid
+  /// Stable, human-readable identifier (organisation code).
+  slug      String       @unique
+  name      String
+  status    TenantStatus @default(ACTIVE)
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  users User[]
+
+  @@map("tenants")
+}
+
+/// Minimal user record (completed by the authentication lot P1-04).
+model User {
+  id         String     @id @db.Uuid
+  tenantId   String     @map("tenant_id") @db.Uuid
+  /// Stored lower-cased. Unique per tenant (decision D-12, provisional option A).
+  email      String
+  status     UserStatus @default(ACTIVE)
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  /// Optimistic concurrency control (ADR 0004).
+  version    Int        @default(1)
+  archivedAt DateTime?  @map("archived_at") @db.Timestamptz(3)
+  archivedBy String?    @map("archived_by") @db.Uuid
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, email])
+  /// Target of composite foreign keys (tenant_id, <fk>) from other tenant-scoped tables.
+  @@unique([tenantId, id])
+  @@map("users")
+}

@@ -21,7 +21,14 @@ describe('validateEnv', () => {
       API_DOCS_ENABLED: true,
       LOG_LEVEL: 'info',
       DATABASE_URL,
+      DATABASE_POOL_MAX: 10,
     });
+  });
+
+  it.each(['0', '201', 'many'])('rejects DATABASE_POOL_MAX=%s', (value) => {
+    expect(() => validateEnv({ DATABASE_URL, DATABASE_POOL_MAX: value })).toThrow(
+      /DATABASE_POOL_MAX/,
+    );
   });
 
   it('parses and coerces a complete environment', () => {

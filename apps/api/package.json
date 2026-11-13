@@ -18,7 +18,8 @@
     "test:e2e": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config jest.e2e.config.js --runInBand",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:deploy": "prisma migrate deploy"
+    "prisma:deploy": "prisma migrate deploy",
+    "tenant:create": "node dist/cli/create-tenant.js"
   },
   "dependencies": {
     "@nestjs/common": "^12.5.0",

@@ -11,7 +11,7 @@ Dernière mise à jour : 2026-11-13 (Phase 0).
 | ID   | Sujet                                                                | Bloque (lots)                                   | Urgence                   |
 | ---- | -------------------------------------------------------------------- | ----------------------------------------------- | ------------------------- |
 | D-01 | Hébergement, localisation des données, lois nationales               | P1-13 (partiel), Phase 7, tout pilote réel      | Avant le pilote           |
-| D-02 | Modèle d'isolation SaaS et attentes on-premise                       | P1-02                                           | **Avant la Phase 1**      |
+| D-02 | Modèle d'isolation SaaS et attentes on-premise                       | —                                               | **Tranchée**              |
 | D-03 | Fournisseur e-mail/SMS et canaux de notification terrain             | P1-08 (partiel), P2-16                          | Avant P1-08 en production |
 | D-04 | Client pilote, secteur, modules indispensables                       | Priorisation de la Phase 2 et des phases 3 à 6  | Avant la Phase 2          |
 | D-05 | Rôles métier de référence et séparation des tâches                   | P1-05 (partiel), P2-02, P2-04, P2-06            | Avant P1-05               |
@@ -325,6 +325,11 @@ Dernière mise à jour : 2026-11-13 (Phase 0).
 
 ## Décisions tranchées
 
-Aucune pour l'instant.
+| ID   | Décision                                                                                                                                                                                                                    | Date       | Par               |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ----------------- |
+| D-02 | **Base partagée** : `tenant_id` + filtrage applicatif centralisé + Row-Level Security (ADR 0002, accepté). Une instance dédiée mono-tenant (même code) reste possible pour un client qui exigerait une séparation physique. | 2026-11-13 | Porteur du projet |
+| —    | Direction visuelle « Salle de contrôle » (ADR 0006).                                                                                                                                                                        | 2026-11-13 | Porteur du projet |
+
+Le lot P1-02 a été réalisé avec les **hypothèses provisoires** de D-12 (e-mail unique par tenant) et de D-13 (création de tenant par commande serveur, aucun compte transverse). Ces deux décisions restent ouvertes ; D-12 bloque P1-04.
 
 Pour mémoire, les décisions produit déjà validées (non rediscutées ici) figurent dans la section 1 du prompt maître : marché, modèle SaaS + licence privée sur une seule base de code, déploiement hybride, Web + Mobile, FR/EN dès le départ.

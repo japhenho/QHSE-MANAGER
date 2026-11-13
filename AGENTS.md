@@ -53,6 +53,7 @@ docs/           Documentation projet, ADR, prompt maître
 - **L'API est en ESM natif** : imports relatifs avec extension `.js`, `import.meta.dirname` au lieu de `__dirname`, Jest lancé avec `--experimental-vm-modules`, `jest` importé depuis `@jest/globals`.
 - **Prisma 7** : configuration dans `apps/api/prisma.config.ts`, client généré dans `apps/api/src/generated/prisma` (ignoré par Git), adaptateur `@prisma/adapter-pg`. Le `.env` n'est pas chargé automatiquement par Prisma.
 - **Deux rôles PostgreSQL** : l'API se connecte avec le rôle d'exécution (`DATABASE_URL`, sans DDL, soumis à la RLS) ; les migrations avec le rôle propriétaire (`MIGRATION_DATABASE_URL`). Dans les tests : `test/support/db.ts` (`createAppClient`, `createOwnerClient`, `resetDatabase`).
+- **Accès aux données tenant** : uniquement `TenantDatabase.run(fn)` (module `src/tenancy`), appelé dans un contexte établi par `runInTenantContext({ tenantId, userId })`. Ne jamais injecter `PrismaService` ni importer le client généré ou `pg` dans un module métier : `src/architecture.spec.ts` échoue. Tout nouveau modèle Prisma doit être déclaré dans `TENANT_SCOPE` (`tenant-scope.ts`) et toute table avec `tenant_id` doit recevoir, dans sa migration, `ENABLE` + `FORCE ROW LEVEL SECURITY` et la politique `tenant_isolation` (le test de catalogue échoue sinon). Regrouper les requêtes d'un traitement dans une seule unité de travail (≈ 1,5 ms fixes chacune).
 - **Schéma Prisma réparti** : un fichier par domaine dans `apps/api/prisma/schema/`. Les migrations restent une séquence unique : jamais deux lots parallèles qui en créent sans intégration une par une.
 - `packages/shared` doit être construit avant lint/typecheck/tests des applications (les scripts racine le font).
 - Tailwind 4 se configure en CSS (`apps/web/src/styles/index.css`), pas dans un `tailwind.config.js`.
@@ -60,16 +61,17 @@ docs/           Documentation projet, ADR, prompt maître
 
 ## Commandes (racine)
 
-| Commande                                     | Effet                                                                                                          |
-| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `pnpm install`                               | Installe les dépendances.                                                                                      |
-| `pnpm build`                                 | Construit shared, API et web.                                                                                  |
-| `pnpm lint` / `pnpm typecheck` / `pnpm test` | Contrôles sur tout le dépôt (tests unitaires, sans base de données).                                           |
-| `pnpm test:e2e`                              | Tests d'intégration de l'API ; nécessite `TEST_DATABASE_URL` et `TEST_MIGRATION_DATABASE_URL` (base `*_test`). |
-| `pnpm db:init`                               | Crée les rôles propriétaire/exécution et les bases (variables PG* d'un superutilisateur).                      |
-| `pnpm db:migrate`                            | Applique les migrations avec le rôle propriétaire (`MIGRATION_DATABASE_URL`).                                  |
-| `pnpm format` / `pnpm format:check`          | Prettier.                                                                                                      |
-| `pnpm db:up` / `pnpm db:down`                | PostgreSQL de développement (Docker Compose).                                                                  |
-| `pnpm dev:api` / `pnpm dev:web`              | Serveurs de développement (API : 3000, web : 5173).                                                            |
-| `pnpm --filter @qhse/api prisma:migrate`     | Crée/applique les migrations en développement.                                                                 |
-| `pnpm --filter @qhse/api prisma:deploy`      | Applique les migrations (CI, production).                                                                      |
+| Commande                                        | Effet                                                                                                          |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `pnpm install`                                  | Installe les dépendances.                                                                                      |
+| `pnpm build`                                    | Construit shared, API et web.                                                                                  |
+| `pnpm lint` / `pnpm typecheck` / `pnpm test`    | Contrôles sur tout le dépôt (tests unitaires, sans base de données).                                           |
+| `pnpm test:e2e`                                 | Tests d'intégration de l'API ; nécessite `TEST_DATABASE_URL` et `TEST_MIGRATION_DATABASE_URL` (base `*_test`). |
+| `pnpm db:init`                                  | Crée les rôles propriétaire/exécution et les bases (variables PG* d'un superutilisateur).                      |
+| `pnpm tenant:create --slug <code> --name <nom>` | Crée un tenant (rôle propriétaire ; après `pnpm build`). Aucun endpoint HTTP ne le permet.                     |
+| `pnpm db:migrate`                               | Applique les migrations avec le rôle propriétaire (`MIGRATION_DATABASE_URL`).                                  |
+| `pnpm format` / `pnpm format:check`             | Prettier.                                                                                                      |
+| `pnpm db:up` / `pnpm db:down`                   | PostgreSQL de développement (Docker Compose).                                                                  |
+| `pnpm dev:api` / `pnpm dev:web`                 | Serveurs de développement (API : 3000, web : 5173).                                                            |
+| `pnpm --filter @qhse/api prisma:migrate`        | Crée/applique les migrations en développement.                                                                 |
+| `pnpm --filter @qhse/api prisma:deploy`         | Applique les migrations (CI, production).                                                                      |

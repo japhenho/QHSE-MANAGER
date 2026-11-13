@@ -4,7 +4,7 @@ Mis à jour à chaque itération. Dernière mise à jour : 2026-11-13.
 
 ## Phase en cours
 
-**Phase 1 — Fondations.** Lot P1-01 livré. Le cadrage de Phase 0 reste à valider formellement (décisions D-02, D-12, D-13).
+**Phase 1 — Fondations.** Lots P1-01 et P1-02 livrés.
 
 ## Livré et vérifié
 
@@ -14,19 +14,20 @@ Mis à jour à chaque itération. Dernière mise à jour : 2026-11-13.
 - `apps/web` : shell responsive (barre latérale, tiroir mobile), navigation pilotée par une configuration typée, jetons de design, primitives UI, i18n FR/EN, couche d'appel API typée, page « État du système ».
 - Direction visuelle « Salle de contrôle » (modèle A) appliquée au socle web : jetons sombres, polices embarquées, test de contraste (ADR 0006).
 - **P1-01** : deux rôles PostgreSQL (propriétaire pour les migrations, exécution pour l'API, sans DDL ni contournement de la RLS), script d'initialisation rejouable `infra/postgres/db-init.sh`, harnais de tests d'intégration (base `*_test`, migrations appliquées, échec franc si la base est injoignable), schéma Prisma réparti par domaine.
+- **P1-02** : tables `tenants` et `users` (minimale), RLS activée et forcée, contexte tenant (`runInTenantContext`), point d'accès unique aux données `TenantDatabase.run`, UUID v7, commande `tenant:create`, test de catalogue et test d'architecture. D-02 tranchée (base partagée), ADR 0002 accepté.
 - Cadrage : `docs/BACKLOG.md` (Phases 1 et 2 détaillées), `docs/DECISIONS-OUVERTES.md` (D-01 à D-13), ADR 0001 à 0006, maquettes dans `docs/maquettes/`.
 
 Preuves du 2026-11-13 (commandes lancées à la racine) :
 
-| Commande                                            | Résultat                                        |
-| --------------------------------------------------- | ----------------------------------------------- |
-| `pnpm build`                                        | OK                                              |
-| `pnpm lint`                                         | OK                                              |
-| `pnpm typecheck`                                    | OK                                              |
-| `pnpm test`                                         | OK — shared 4, API 51, web 70                   |
-| `pnpm test:e2e` (PostgreSQL 16 local)               | OK — 27 (santé 12, rôles de base de données 15) |
-| `pnpm format:check`                                 | OK                                              |
-| Parcours réel dans un navigateur (web → API → base) | OK en 1280 px et 390 px, aucune erreur console  |
+| Commande                                            | Résultat                                                                      |
+| --------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `pnpm build`                                        | OK                                                                            |
+| `pnpm lint`                                         | OK                                                                            |
+| `pnpm typecheck`                                    | OK                                                                            |
+| `pnpm test`                                         | OK — shared 4, API 118, web 70                                                |
+| `pnpm test:e2e` (PostgreSQL 16 local)               | OK — 77 (santé 12, rôles 15, RLS 26, chemin applicatif et provisionnement 24) |
+| `pnpm format:check`                                 | OK                                                                            |
+| Parcours réel dans un navigateur (web → API → base) | OK en 1280 px et 390 px, aucune erreur console                                |
 
 ## Non vérifié
 
@@ -46,4 +47,4 @@ Validation du cadrage, et en priorité les décisions à trancher **avant la Pha
 
 ## Prochain lot
 
-**P1-02 — Tenants et mécanisme d'isolation (application + RLS)** : bloqué par D-02, D-12 et D-13. En attendant, seul P1-11 (design system, web seul) peut avancer.
+**P1-03 — Journal d'audit en ajout seul** (aucune décision bloquante ; D-06 ne concerne que la purge). Ensuite P1-04 (authentification), **bloqué par D-12**. P1-11 (design system, web seul) reste possible en parallèle.

@@ -6,9 +6,9 @@ const PACKAGE_ROOT = path.resolve(import.meta.dirname, '..', '..');
 
 /**
  * Loads optional .env files (package first, then monorepo root) without overriding
- * variables already present in the process environment, then validates the result.
+ * variables already present in the process environment.
  */
-export function loadEnv(): Env {
+export function loadEnvFiles(): void {
   for (const file of [
     path.join(PACKAGE_ROOT, '.env'),
     path.join(PACKAGE_ROOT, '..', '..', '.env'),
@@ -19,5 +19,9 @@ export function loadEnv(): Env {
       // No .env file: expected in CI and production where variables are injected.
     }
   }
+}
+
+export function loadEnv(): Env {
+  loadEnvFiles();
   return validateEnv(process.env);
 }
