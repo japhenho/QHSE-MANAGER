@@ -1,11 +1,11 @@
 packages:
-  - "apps/*"
-  - "packages/*"
+  - 'apps/*'
+  - 'packages/*'
 
 onlyBuiltDependencies:
   - esbuild
-  - "@nestjs/core"
+  - '@nestjs/core'
   - prisma
-  - "@prisma/client"
-  - "@prisma/engines"
-  - "@parcel/watcher"
+  - '@prisma/client'
+  - '@prisma/engines'
+  - '@parcel/watcher'

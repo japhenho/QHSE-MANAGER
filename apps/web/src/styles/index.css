@@ -1,0 +1,126 @@
+@import 'tailwindcss';
+
+/*
+ * QHSE Manager design tokens.
+ *
+ * Components must only use these semantic tokens (bg-surface, text-fg-muted,
+ * border-line, bg-success-surface…), never raw palette values, so that every
+ * module shares one look and a theme can be swapped in one place.
+ *
+ * Contrast: every text/background pair below is >= 7:1 and every
+ * border/indicator pair is >= 3:1 (WCAG 2.2 AA, with margin for outdoor use).
+ */
+@theme {
+  --font-sans:
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace;
+
+  /* Surfaces */
+  --color-page: #f3f5f7;
+  --color-surface: #ffffff;
+  --color-surface-sunken: #e9edf1;
+
+  /* Text */
+  --color-fg: #111827;
+  --color-fg-muted: #45505f;
+
+  /* Borders: `line` is decorative, `line-strong` marks interactive boundaries (>= 3:1). */
+  --color-line: #c3cad3;
+  --color-line-strong: #6b7685;
+
+  /* Primary action */
+  --color-primary: #0b4a7d;
+  --color-primary-hover: #083a63;
+  --color-primary-active: #062c4b;
+  --color-on-primary: #ffffff;
+
+  /* Navigation chrome (sidebar) */
+  --color-chrome: #0f2233;
+  --color-chrome-raised: #1d3a52;
+  --color-chrome-line: #35516a;
+  --color-on-chrome: #e6edf3;
+  --color-on-chrome-muted: #a9b8c6;
+  --color-accent: #f5a524;
+
+  /* Focus rings */
+  --color-focus: #0b4a7d;
+  --color-focus-on-chrome: #ffd166;
+
+  /* Status colors: each status has a tinted surface, a readable text and a border/indicator. */
+  --color-success: #1f7a3f;
+  --color-success-surface: #dcf5e3;
+  --color-success-fg: #14532d;
+
+  --color-warning: #b26a00;
+  --color-warning-surface: #fff0c7;
+  --color-warning-fg: #6b3d00;
+
+  --color-danger: #c62828;
+  --color-danger-surface: #fde4e2;
+  --color-danger-fg: #8a1414;
+
+  --color-info: #1565c0;
+  --color-info-surface: #dceafa;
+  --color-info-fg: #0b4170;
+
+  --color-neutral: #6b7685;
+  --color-neutral-surface: #e9edf1;
+  --color-neutral-fg: #2b3440;
+
+  /* Minimum touch target (gloved use): 44px, and a comfortable 52px variant. */
+  --spacing-touch: 2.75rem;
+  --spacing-touch-lg: 3.25rem;
+
+  --radius-control: 0.5rem;
+  --radius-card: 0.75rem;
+
+  --shadow-card: 0 1px 2px rgb(17 24 39 / 0.08);
+  --shadow-drawer: 0 0 32px rgb(0 0 0 / 0.35);
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    min-height: 100dvh;
+    background-color: var(--color-page);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+  }
+
+  #root {
+    min-height: 100dvh;
+  }
+
+  /* One consistent, highly visible keyboard focus indicator everywhere. */
+  :focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  /* Programmatically focused containers (route change) should not show a ring. */
+  [tabindex='-1']:focus {
+    outline: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* Focus ring variant for elements sitting on the dark navigation chrome. */
+@utility focus-on-chrome {
+  &:focus-visible {
+    outline-color: var(--color-focus-on-chrome);
+  }
+}

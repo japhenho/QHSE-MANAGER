@@ -1,0 +1,14 @@
+// Prisma schema — Phase 0 foundation.
+// Datasource and generator only: no model is allowed until a business phase opens.
+// The connection URL lives in prisma.config.ts (Prisma 7), not in this file.
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
