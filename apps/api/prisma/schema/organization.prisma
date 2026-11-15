@@ -13,8 +13,9 @@ model Company {
   archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
   archivedBy String?   @map("archived_by") @db.Uuid
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  sites  Site[]
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  sites           Site[]
+  roleAssignments RoleAssignment[]
 
   @@unique([tenantId, code])
   @@unique([tenantId, id])
@@ -41,10 +42,11 @@ model Site {
   archivedAt   DateTime? @map("archived_at") @db.Timestamptz(3)
   archivedBy   String?   @map("archived_by") @db.Uuid
 
-  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   /// Composite key: a site can only belong to a company of the same tenant.
-  company     Company      @relation(fields: [tenantId, companyId], references: [tenantId, id], onDelete: Restrict)
-  departments Department[]
+  company         Company          @relation(fields: [tenantId, companyId], references: [tenantId, id], onDelete: Restrict)
+  departments     Department[]
+  roleAssignments RoleAssignment[]
 
   @@unique([tenantId, code])
   @@unique([tenantId, id])
@@ -64,9 +66,10 @@ model Department {
   archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
   archivedBy String?   @map("archived_by") @db.Uuid
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   /// Composite key: a department can only belong to a site of the same tenant.
-  site   Site   @relation(fields: [tenantId, siteId], references: [tenantId, id], onDelete: Restrict)
+  site            Site             @relation(fields: [tenantId, siteId], references: [tenantId, id], onDelete: Restrict)
+  roleAssignments RoleAssignment[]
 
   @@unique([tenantId, siteId, name])
   @@unique([tenantId, id])

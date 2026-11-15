@@ -115,7 +115,9 @@ export function OrganizationListPage({ kind }: { kind: EntityKind }) {
         title={t('organization.title')}
         description={t('organization.description')}
         actions={
-          can(PERMISSIONS.ORGANIZATION_MANAGE) ? (
+          // Creating a company needs the right for the whole tenant; a site or a
+          // department can be created by someone managing a narrower scope.
+          can(PERMISSIONS.ORGANIZATION_MANAGE, { anywhere: kind !== 'companies' }) ? (
             <Link to={config.newPath} className={buttonClasses()}>
               {t(`organization.${kind}.create`)}
             </Link>

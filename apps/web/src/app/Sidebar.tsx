@@ -55,28 +55,28 @@ export function Sidebar({ open, onClose, closeButtonRef }: SidebarProps) {
 
       <nav aria-label={t('nav.label')} className="flex-1 overflow-y-auto p-3">
         <ul className="flex flex-col gap-1">
-          {NAV_ITEMS.filter((item) => !item.permission || can(item.permission)).map(
-            ({ id, path, labelKey, icon: Icon, end }) => (
-              <li key={id}>
-                <NavLink
-                  to={path}
-                  end={end}
-                  onClick={onClose}
-                  className={({ isActive }) =>
-                    cx(
-                      'focus-on-chrome flex min-h-touch-lg items-center gap-3 rounded-control border-l-4 px-3 text-base font-medium',
-                      isActive
-                        ? 'border-accent bg-chrome-raised text-white'
-                        : 'border-transparent text-on-chrome hover:bg-chrome-raised',
-                    )
-                  }
-                >
-                  <Icon className="size-6 shrink-0" />
-                  <span className="min-w-0 break-words">{t(labelKey)}</span>
-                </NavLink>
-              </li>
-            ),
-          )}
+          {NAV_ITEMS.filter(
+            (item) => !item.permission || can(item.permission, { anywhere: item.anyScope }),
+          ).map(({ id, path, labelKey, icon: Icon, end }) => (
+            <li key={id}>
+              <NavLink
+                to={path}
+                end={end}
+                onClick={onClose}
+                className={({ isActive }) =>
+                  cx(
+                    'focus-on-chrome flex min-h-touch-lg items-center gap-3 rounded-control border-l-4 px-3 text-base font-medium',
+                    isActive
+                      ? 'border-accent bg-chrome-raised text-white'
+                      : 'border-transparent text-on-chrome hover:bg-chrome-raised',
+                  )
+                }
+              >
+                <Icon className="size-6 shrink-0" />
+                <span className="min-w-0 break-words">{t(labelKey)}</span>
+              </NavLink>
+            </li>
+          ))}
         </ul>
       </nav>
     </aside>

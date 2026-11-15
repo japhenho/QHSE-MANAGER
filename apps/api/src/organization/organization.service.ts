@@ -10,6 +10,7 @@ import {
   type DepartmentView,
   ERROR_CODES,
   type OrganizationErrorReason,
+  PERMISSIONS,
   type Paginated,
   type SiteListQuery,
   type SiteView,
@@ -21,12 +22,20 @@ import { AuditService } from '../audit/index.js';
 import type { Actor } from '../auth/access.decorators.js';
 import { Clock } from '../common/clock.js';
 import { AppException } from '../common/errors/app.exception.js';
+import { AccessScope } from '../rbac/access-scope.js';
 import { TenantDatabase, type TenantTransaction, uuidv7 } from '../tenancy/index.js';
 
 const UNIQUE_VIOLATION = 'P2002';
 type EntityType = 'company' | 'site' | 'department';
 
+const READ = PERMISSIONS.ORGANIZATION_READ;
+const MANAGE = PERMISSIONS.ORGANIZATION_MANAGE;
+
 const notFound = (what: string) => new AppException(ERROR_CODES.NOT_FOUND, `${what} not found`);
+const outsideScope = () =>
+  new AppException(ERROR_CODES.FORBIDDEN, 'This action is outside the scope of your role', {
+    details: { reason: 'outside_scope' },
+  });
 /** `reason` is a stable key the web application translates; `message` is for developers. */
 const conflict = (reason: OrganizationErrorReason, message: string) =>
   new AppException(ERROR_CODES.CONFLICT, message, { details: { reason } });
@@ -116,6 +125,10 @@ const DEPARTMENT_INCLUDE = { site: { select: { name: true } } } as const;
 /**
  * Companies, sites and departments of a tenant.
  *
+ * Scope: every read is filtered by where the caller holds `organization:read`, every
+ * write by where they hold `organization:manage` (see `AccessScope`). A record outside
+ * the scope gets the answer of an unknown identifier.
+ *
  * Shared rules: nothing is ever physically deleted (archiving only); an archived record
  * is read-only until restored; a parent cannot be archived while it has active
  * children, and a child cannot be created under, or restored into, an archived parent;
@@ -131,19 +144,29 @@ export class OrganizationService {
 
   // -------------------------------------------------------------- companies
 
-  listCompanies(query: CompanyListQuery): Promise<Paginated<CompanyView>> {
-    const where = { ...archiveFilter(query.status), ...textSearch(query.search, ['name', 'code']) };
+  listCompanies(actor: Actor, query: CompanyListQuery): Promise<Paginated<CompanyView>> {
+    const where = {
+      AND: [
+        actor.scopeOf(READ).companyFilter(),
+        archiveFilter(query.status),
+        textSearch(query.search, ['name', 'code']),
+      ],
+    };
     return this.db.run(async (tx) => {
       const rows = await tx.company.findMany({ where, orderBy: ordering(query), ...paging(query) });
       return pageOf(query, rows.map(toCompany), await tx.company.count({ where }));
     });
   }
 
-  getCompany(id: string): Promise<CompanyView> {
-    return this.db.run(async (tx) => toCompany(await this.requireCompany(tx, id)));
+  getCompany(actor: Actor, id: string): Promise<CompanyView> {
+    return this.db.run(async (tx) =>
+      toCompany(await this.requireCompany(tx, id, actor.scopeOf(READ))),
+    );
   }
 
   createCompany(actor: Actor, input: CreateCompanyRequest): Promise<CompanyView> {
+    // A new company belongs to no existing scope: only a tenant-wide right can create it.
+    if (!actor.scopeOf(MANAGE).tenantWide) throw outsideScope();
     return this.db.run(async (tx) => {
       const id = uuidv7();
       const row = await this.unique('code_taken', () =>
@@ -157,7 +180,7 @@ export class OrganizationService {
   updateCompany(actor: Actor, id: string, input: UpdateCompanyRequest): Promise<CompanyView> {
     const { version, ...changes } = input;
     return this.db.run(async (tx) => {
-      this.assertEditable(await this.requireCompany(tx, id));
+      this.assertEditable(await this.requireCompany(tx, id, actor.scopeOf(MANAGE)));
       const { count } = await this.unique('code_taken', () =>
         tx.company.updateMany({
           where: { id, version },
@@ -172,7 +195,7 @@ export class OrganizationService {
 
   archiveCompany(actor: Actor, id: string): Promise<CompanyView> {
     return this.db.run(async (tx) => {
-      const company = await this.requireCompany(tx, id);
+      const company = await this.requireCompany(tx, id, actor.scopeOf(MANAGE));
       if (company.archivedAt === null) {
         const activeSites = await tx.site.count({ where: { companyId: id, archivedAt: null } });
         if (activeSites > 0) {
@@ -185,9 +208,9 @@ export class OrganizationService {
     });
   }
 
-  restoreCompany(id: string): Promise<CompanyView> {
+  restoreCompany(actor: Actor, id: string): Promise<CompanyView> {
     return this.db.run(async (tx) => {
-      const company = await this.requireCompany(tx, id);
+      const company = await this.requireCompany(tx, id, actor.scopeOf(MANAGE));
       if (company.archivedAt !== null) {
         await tx.company.update({ where: { id }, data: this.restored() });
         await this.recordArchival(tx, 'company', id, false);
@@ -198,11 +221,14 @@ export class OrganizationService {
 
   // ------------------------------------------------------------------ sites
 
-  listSites(query: SiteListQuery): Promise<Paginated<SiteView>> {
+  listSites(actor: Actor, query: SiteListQuery): Promise<Paginated<SiteView>> {
     const where = {
-      ...archiveFilter(query.status),
-      ...textSearch(query.search, ['name', 'code']),
-      ...(query.companyId ? { companyId: query.companyId } : {}),
+      AND: [
+        actor.scopeOf(READ).siteFilter(),
+        archiveFilter(query.status),
+        textSearch(query.search, ['name', 'code']),
+        query.companyId ? { companyId: query.companyId } : {},
+      ],
     };
     return this.db.run(async (tx) => {
       const rows = await tx.site.findMany({
@@ -215,14 +241,15 @@ export class OrganizationService {
     });
   }
 
-  getSite(id: string): Promise<SiteView> {
-    return this.db.run(async (tx) => toSite(await this.requireSite(tx, id)));
+  getSite(actor: Actor, id: string): Promise<SiteView> {
+    return this.db.run(async (tx) => toSite(await this.requireSite(tx, id, actor.scopeOf(READ))));
   }
 
   createSite(actor: Actor, input: CreateSiteRequest): Promise<SiteView> {
     return this.db.run(async (tx) => {
-      // A company of another tenant is invisible here: same answer as an unknown id.
-      const company = await this.requireCompany(tx, input.companyId);
+      // A company of another tenant, or outside the caller's scope, is invisible here:
+      // same answer as an unknown id.
+      const company = await this.requireCompany(tx, input.companyId, actor.scopeOf(MANAGE));
       if (company.archivedAt !== null) {
         throw conflict('parent_archived', 'The company is archived');
       }
@@ -242,7 +269,7 @@ export class OrganizationService {
   updateSite(actor: Actor, id: string, input: UpdateSiteRequest): Promise<SiteView> {
     const { version, ...changes } = input;
     return this.db.run(async (tx) => {
-      this.assertEditable(await this.requireSite(tx, id));
+      this.assertEditable(await this.requireSite(tx, id, actor.scopeOf(MANAGE)));
       const { count } = await this.unique('code_taken', () =>
         tx.site.updateMany({
           where: { id, version },
@@ -257,7 +284,7 @@ export class OrganizationService {
 
   archiveSite(actor: Actor, id: string): Promise<SiteView> {
     return this.db.run(async (tx) => {
-      const site = await this.requireSite(tx, id);
+      const site = await this.requireSite(tx, id, actor.scopeOf(MANAGE));
       if (site.archivedAt === null) {
         const active = await tx.department.count({ where: { siteId: id, archivedAt: null } });
         if (active > 0) {
@@ -270,9 +297,9 @@ export class OrganizationService {
     });
   }
 
-  restoreSite(id: string): Promise<SiteView> {
+  restoreSite(actor: Actor, id: string): Promise<SiteView> {
     return this.db.run(async (tx) => {
-      const site = await this.requireSite(tx, id);
+      const site = await this.requireSite(tx, id, actor.scopeOf(MANAGE));
       if (site.archivedAt !== null) {
         const company = await this.requireCompany(tx, site.companyId);
         if (company.archivedAt !== null) {
@@ -287,11 +314,14 @@ export class OrganizationService {
 
   // ------------------------------------------------------------ departments
 
-  listDepartments(query: DepartmentListQuery): Promise<Paginated<DepartmentView>> {
+  listDepartments(actor: Actor, query: DepartmentListQuery): Promise<Paginated<DepartmentView>> {
     const where = {
-      ...archiveFilter(query.status),
-      ...textSearch(query.search, ['name']),
-      ...(query.siteId ? { siteId: query.siteId } : {}),
+      AND: [
+        actor.scopeOf(READ).departmentFilter(),
+        archiveFilter(query.status),
+        textSearch(query.search, ['name']),
+        query.siteId ? { siteId: query.siteId } : {},
+      ],
     };
     return this.db.run(async (tx) => {
       const rows = await tx.department.findMany({
@@ -304,13 +334,15 @@ export class OrganizationService {
     });
   }
 
-  getDepartment(id: string): Promise<DepartmentView> {
-    return this.db.run(async (tx) => toDepartment(await this.requireDepartment(tx, id)));
+  getDepartment(actor: Actor, id: string): Promise<DepartmentView> {
+    return this.db.run(async (tx) =>
+      toDepartment(await this.requireDepartment(tx, id, actor.scopeOf(READ))),
+    );
   }
 
   createDepartment(actor: Actor, input: CreateDepartmentRequest): Promise<DepartmentView> {
     return this.db.run(async (tx) => {
-      const site = await this.requireSite(tx, input.siteId);
+      const site = await this.requireSite(tx, input.siteId, actor.scopeOf(MANAGE));
       if (site.archivedAt !== null) throw conflict('parent_archived', 'The site is archived');
       const id = uuidv7();
       await this.unique('name_taken', () =>
@@ -328,7 +360,7 @@ export class OrganizationService {
   ): Promise<DepartmentView> {
     const { version, ...changes } = input;
     return this.db.run(async (tx) => {
-      this.assertEditable(await this.requireDepartment(tx, id));
+      this.assertEditable(await this.requireDepartment(tx, id, actor.scopeOf(MANAGE)));
       const { count } = await this.unique('name_taken', () =>
         tx.department.updateMany({
           where: { id, version },
@@ -343,7 +375,7 @@ export class OrganizationService {
 
   archiveDepartment(actor: Actor, id: string): Promise<DepartmentView> {
     return this.db.run(async (tx) => {
-      const department = await this.requireDepartment(tx, id);
+      const department = await this.requireDepartment(tx, id, actor.scopeOf(MANAGE));
       if (department.archivedAt === null) {
         await tx.department.update({ where: { id }, data: this.archived(actor) });
         await this.recordArchival(tx, 'department', id, true);
@@ -352,9 +384,9 @@ export class OrganizationService {
     });
   }
 
-  restoreDepartment(id: string): Promise<DepartmentView> {
+  restoreDepartment(actor: Actor, id: string): Promise<DepartmentView> {
     return this.db.run(async (tx) => {
-      const department = await this.requireDepartment(tx, id);
+      const department = await this.requireDepartment(tx, id, actor.scopeOf(MANAGE));
       if (department.archivedAt !== null) {
         const site = await this.requireSite(tx, department.siteId);
         if (site.archivedAt !== null) {
@@ -369,20 +401,43 @@ export class OrganizationService {
 
   // ---------------------------------------------------------------- helpers
 
-  private async requireCompany(tx: TenantTransaction, id: string): Promise<CompanyRow> {
-    const row = await tx.company.findUnique({ where: { id } });
+  /**
+   * Loads a record, or answers "not found". With a `scope`, a record outside of it is
+   * treated exactly like one that does not exist. Without one (internal lookups of a
+   * parent, re-reads after a write) only the tenant boundary applies.
+   */
+  private async requireCompany(
+    tx: TenantTransaction,
+    id: string,
+    scope: AccessScope = AccessScope.TENANT,
+  ): Promise<CompanyRow> {
+    const row = await tx.company.findFirst({ where: { AND: [{ id }, scope.companyFilter()] } });
     if (!row) throw notFound('Company');
     return row;
   }
 
-  private async requireSite(tx: TenantTransaction, id: string): Promise<SiteRow> {
-    const row = await tx.site.findUnique({ where: { id }, include: SITE_INCLUDE });
+  private async requireSite(
+    tx: TenantTransaction,
+    id: string,
+    scope: AccessScope = AccessScope.TENANT,
+  ): Promise<SiteRow> {
+    const row = await tx.site.findFirst({
+      where: { AND: [{ id }, scope.siteFilter()] },
+      include: SITE_INCLUDE,
+    });
     if (!row) throw notFound('Site');
     return row;
   }
 
-  private async requireDepartment(tx: TenantTransaction, id: string): Promise<DepartmentRow> {
-    const row = await tx.department.findUnique({ where: { id }, include: DEPARTMENT_INCLUDE });
+  private async requireDepartment(
+    tx: TenantTransaction,
+    id: string,
+    scope: AccessScope = AccessScope.TENANT,
+  ): Promise<DepartmentRow> {
+    const row = await tx.department.findFirst({
+      where: { AND: [{ id }, scope.departmentFilter()] },
+      include: DEPARTMENT_INCLUDE,
+    });
     if (!row) throw notFound('Department');
     return row;
   }

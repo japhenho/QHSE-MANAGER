@@ -1,14 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type {
-  AuthSessionResponse,
-  CurrentUserResponse,
-  LoginRequest,
-  PermissionKey,
-} from '@qhse/shared';
+import type { AuthSessionResponse, CurrentUserResponse, LoginRequest } from '@qhse/shared';
 import { AuditService } from '../audit/index.js';
 import { Clock } from '../common/clock.js';
 import { ENV, type Env } from '../config/index.js';
-import { effectivePermissions } from '../rbac/permissions.js';
+import { type Grants, loadGrants } from '../rbac/access-scope.js';
 import {
   type RequestOrigin,
   runInTenantContext,
@@ -281,13 +276,11 @@ export class AuthService {
   // ------------------------------------------------- per-request validation
 
   /**
-   * Permissions of the user of an access token, or null when its session is no longer
+   * Grants (permissions and their scopes) of the user of an access token, or null when its session is no longer
    * usable. Read on every request so that a logout, a revocation, a disabled account or
    * a removed role takes effect at once, without waiting for the token to expire.
    */
-  async loadSessionPermissions(
-    claims: AccessTokenClaims,
-  ): Promise<ReadonlySet<PermissionKey> | null> {
+  async loadSessionGrants(claims: AccessTokenClaims): Promise<Grants | null> {
     const now = this.clock.now();
     return runInTenantContext({ tenantId: claims.tenantId }, () =>
       this.db.run(async (tx) => {
@@ -296,7 +289,7 @@ export class AuthService {
         if (session.revokedAt !== null || session.expiresAt <= now) return null;
         const user = await tx.user.findUnique({ where: { id: claims.userId } });
         if (user === null || user.status !== 'ACTIVE' || user.archivedAt !== null) return null;
-        return effectivePermissions(tx, claims.userId);
+        return loadGrants(tx, claims.userId);
       }),
     );
   }
@@ -350,10 +343,12 @@ export class AuthService {
       await tx.tenant.findUnique({ where: { id: tenantId } }),
     ];
     if (!user || !tenant) throw unauthenticated();
+    const grants = await loadGrants(tx, userId);
     return {
       user: { id: user.id, email: user.email },
       tenant: { id: tenant.id, slug: tenant.slug, name: tenant.name },
-      permissions: [...(await effectivePermissions(tx, userId))].sort(),
+      permissions: [...grants.tenantWide()].sort(),
+      permissionsAnywhere: [...grants.anywhere()].sort(),
     };
   }
 

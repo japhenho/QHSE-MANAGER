@@ -12,11 +12,21 @@ export const TEST_IDENTITY = {
   user: { id: '0193a000-0000-7000-8000-000000000001', email: 'demo.user@example.test' },
   tenant: { id: '0193a000-0000-7000-8000-0000000000aa', slug: 'demo-org', name: 'Demo Org (DEMO)' },
   permissions: [...PERMISSION_KEYS],
+  permissionsAnywhere: [...PERMISSION_KEYS],
 };
 
 /** Same identity with a restricted set of permissions. */
 export function identityWith(permissions: PermissionKey[]) {
-  return { ...TEST_IDENTITY, permissions };
+  return { ...TEST_IDENTITY, permissions, permissionsAnywhere: permissions };
+}
+
+/** Identity holding `scoped` on some narrower scope only, and `tenantWide` everywhere. */
+export function scopedIdentity(scoped: PermissionKey[], tenantWide: PermissionKey[] = []) {
+  return {
+    ...TEST_IDENTITY,
+    permissions: tenantWide,
+    permissionsAnywhere: [...tenantWide, ...scoped],
+  };
 }
 
 /**

@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import {
   type AccessErrorReason,
+  type AccessScopeType,
+  type AssignRoleRequest,
+  PERMISSIONS,
+  type RoleAssignmentView,
   type CreateRoleRequest,
   ERROR_CODES,
   isPermissionKey,
@@ -16,6 +20,7 @@ import {
 import { AuditService } from '../audit/index.js';
 import type { Actor } from '../auth/access.decorators.js';
 import { AppException } from '../common/errors/app.exception.js';
+import type { AccessScope } from './access-scope.js';
 import { TenantDatabase, type TenantTransaction, uuidv7 } from '../tenancy/index.js';
 
 const UNIQUE_VIOLATION = 'P2002';
@@ -75,6 +80,46 @@ function assertHoldsAll(actor: Actor, permissions: readonly PermissionKey[]): vo
       'You cannot handle a role that carries permissions you do not hold',
     );
   }
+}
+
+const SCOPE_TO_DB = {
+  tenant: 'TENANT',
+  company: 'COMPANY',
+  site: 'SITE',
+  department: 'DEPARTMENT',
+} as const;
+const SCOPE_FROM_DB = {
+  TENANT: 'tenant',
+  COMPANY: 'company',
+  SITE: 'site',
+  DEPARTMENT: 'department',
+} as const;
+
+/** A resolved scope, with the test telling whether an access scope covers it. */
+interface ScopeTarget {
+  type: AccessScopeType;
+  id: string | null;
+  name: string | null;
+  covers(scope: AccessScope): boolean;
+}
+
+function toAssignmentView(
+  assignment: { id: string },
+  role: Pick<RoleRow, 'id' | 'name' | 'referenceKey' | 'isSystem'>,
+  target: ScopeTarget,
+): RoleAssignmentView {
+  return {
+    id: assignment.id,
+    role: {
+      id: role.id,
+      name: role.name,
+      referenceKey: role.referenceKey,
+      isSystem: role.isSystem,
+    },
+    scopeType: target.type,
+    scopeId: target.id,
+    scopeName: target.name,
+  };
 }
 
 @Injectable()
@@ -191,45 +236,85 @@ export class RbacService {
 
   // ------------------------------------------------------------ assignments
 
-  assignRole(actor: Actor, userId: string, roleId: string): Promise<void> {
-    if (userId === actor.userId)
+  /**
+   * Gives a role to a user on a scope. Three limits apply to the caller:
+   *  - never to themselves;
+   *  - only on a scope their own `role:assign` permission covers (elsewhere the scope
+   *    "does not exist" for them);
+   *  - only a role whose every permission they hold on that scope.
+   */
+  assignRole(actor: Actor, userId: string, input: AssignRoleRequest): Promise<RoleAssignmentView> {
+    if (userId === actor.userId) {
       throw forbidden('self_assignment', 'You cannot assign a role to yourself');
+    }
     return this.db.run(async (tx) => {
-      const role = await this.requireRole(tx, roleId);
+      const role = await this.requireRole(tx, input.roleId);
       const user = await tx.user.findUnique({ where: { id: userId } });
       if (!user || user.archivedAt !== null) throw notFound('User');
-      assertHoldsAll(actor, permissionsOf(role));
+      const target = await this.resolveTarget(tx, actor, input.scopeType, input.scopeId);
+      this.assertHoldsAllOn(actor, permissionsOf(role), target);
 
-      const existing = await tx.roleAssignment.findFirst({ where: { userId, roleId } });
-      if (existing) return; // Idempotent: nothing changed, nothing to record.
+      const scopeKey = target.id ?? 'tenant';
+      const existing = await tx.roleAssignment.findFirst({
+        where: { userId, roleId: role.id, scopeKey },
+      });
+      if (existing) return toAssignmentView(existing, role, target); // Idempotent.
 
-      await tx.roleAssignment.create({
-        data: { id: uuidv7(), tenantId: actor.tenantId, userId, roleId, assignedBy: actor.userId },
+      const created = await tx.roleAssignment.create({
+        data: {
+          id: uuidv7(),
+          tenantId: actor.tenantId,
+          userId,
+          roleId: role.id,
+          scopeType: SCOPE_TO_DB[input.scopeType],
+          scopeKey,
+          companyId: input.scopeType === 'company' ? target.id : null,
+          siteId: input.scopeType === 'site' ? target.id : null,
+          departmentId: input.scopeType === 'department' ? target.id : null,
+          assignedBy: actor.userId,
+        },
       });
       await this.audit.record(tx, {
         action: 'role.assigned',
         resource: { type: 'user', id: userId },
-        metadata: { roleId, roleName: role.name },
+        metadata: {
+          roleId: role.id,
+          roleName: role.name,
+          scopeType: input.scopeType,
+          ...(target.id ? { scopeId: target.id } : {}),
+        },
       });
+      return toAssignmentView(created, role, target);
     });
   }
 
-  unassignRole(actor: Actor, userId: string, roleId: string): Promise<void> {
+  unassignRole(actor: Actor, userId: string, assignmentId: string): Promise<void> {
     return this.db.run(async (tx) => {
+      const assignment = await tx.roleAssignment.findFirst({ where: { id: assignmentId, userId } });
+      if (!assignment) throw notFound('Role assignment');
       // Lock the role: two concurrent withdrawals of the last two administrators must
       // be processed one after the other.
-      await tx.$queryRaw`SELECT id FROM roles WHERE id = ${roleId}::uuid FOR UPDATE`;
-      const role = await this.requireRole(tx, roleId);
-      const user = await tx.user.findUnique({ where: { id: userId } });
-      if (!user) throw notFound('User');
-      assertHoldsAll(actor, permissionsOf(role));
+      await tx.$queryRaw`SELECT id FROM roles WHERE id = ${assignment.roleId}::uuid FOR UPDATE`;
+      const role = await this.requireRole(tx, assignment.roleId);
+      const scopeType = SCOPE_FROM_DB[assignment.scopeType];
+      const scopeId = assignment.companyId ?? assignment.siteId ?? assignment.departmentId;
+      let target: ScopeTarget;
+      try {
+        target = await this.resolveTarget(tx, actor, scopeType, scopeId ?? undefined);
+      } catch {
+        // Outside the caller's scope: the assignment does not exist for them.
+        throw notFound('Role assignment');
+      }
+      this.assertHoldsAllOn(actor, permissionsOf(role), target);
 
-      const existing = await tx.roleAssignment.findFirst({ where: { userId, roleId } });
-      if (!existing) return;
-
-      if (role.isSystem) {
+      if (role.isSystem && assignment.scopeType === 'TENANT') {
         const otherActiveAdministrators = await tx.roleAssignment.count({
-          where: { roleId, userId: { not: userId }, user: { status: 'ACTIVE', archivedAt: null } },
+          where: {
+            roleId: role.id,
+            scopeType: 'TENANT',
+            userId: { not: userId },
+            user: { status: 'ACTIVE', archivedAt: null },
+          },
         });
         if (otherActiveAdministrators === 0) {
           throw conflict(
@@ -239,11 +324,16 @@ export class RbacService {
         }
       }
 
-      await tx.roleAssignment.deleteMany({ where: { id: existing.id } });
+      await tx.roleAssignment.deleteMany({ where: { id: assignment.id } });
       await this.audit.record(tx, {
         action: 'role.unassigned',
         resource: { type: 'user', id: userId },
-        metadata: { roleId, roleName: role.name },
+        metadata: {
+          roleId: role.id,
+          roleName: role.name,
+          scopeType,
+          ...(scopeId ? { scopeId } : {}),
+        },
       });
     });
   }
@@ -268,9 +358,17 @@ export class RbacService {
             status: true,
             roleAssignments: {
               select: {
+                id: true,
+                scopeType: true,
+                companyId: true,
+                siteId: true,
+                departmentId: true,
                 role: { select: { id: true, name: true, referenceKey: true, isSystem: true } },
+                company: { select: { name: true } },
+                site: { select: { name: true } },
+                department: { select: { name: true } },
               },
-              orderBy: { role: { name: 'asc' } },
+              orderBy: [{ role: { name: 'asc' } }, { scopeKey: 'asc' }],
             },
           },
         }),
@@ -281,7 +379,17 @@ export class RbacService {
           id: user.id,
           email: user.email,
           status: user.status,
-          roles: user.roleAssignments.map((assignment) => assignment.role),
+          assignments: user.roleAssignments.map((assignment) => ({
+            id: assignment.id,
+            role: assignment.role,
+            scopeType: SCOPE_FROM_DB[assignment.scopeType],
+            scopeId: assignment.companyId ?? assignment.siteId ?? assignment.departmentId,
+            scopeName:
+              assignment.company?.name ??
+              assignment.site?.name ??
+              assignment.department?.name ??
+              null,
+          })),
         })),
         page: query.page,
         pageSize: query.pageSize,
@@ -297,6 +405,77 @@ export class RbacService {
     // A role of another tenant is invisible here: same answer as a role that does not exist.
     if (!role) throw notFound('Role');
     return role;
+  }
+
+  /**
+   * Finds the scope an assignment is about and checks the caller may assign there.
+   * A scope of another tenant, a scope that does not exist and a scope outside the
+   * caller's own `role:assign` scope all give the same answer: not found.
+   */
+  private async resolveTarget(
+    tx: TenantTransaction,
+    actor: Actor,
+    scopeType: AccessScopeType,
+    scopeId: string | undefined,
+  ): Promise<ScopeTarget> {
+    const assignScope = actor.scopeOf(PERMISSIONS.ROLE_ASSIGN);
+    if (scopeType === 'tenant') {
+      if (!assignScope.tenantWide) throw notFound('Scope');
+      return { type: 'tenant', id: null, name: null, covers: (scope) => scope.tenantWide };
+    }
+    if (scopeId === undefined) throw notFound('Scope');
+
+    if (scopeType === 'company') {
+      const company = await tx.company.findUnique({ where: { id: scopeId } });
+      if (!company || !assignScope.coversCompany(company.id)) throw notFound('Scope');
+      return {
+        type: 'company',
+        id: company.id,
+        name: company.name,
+        covers: (scope) => scope.coversCompany(company.id),
+      };
+    }
+    if (scopeType === 'site') {
+      const site = await tx.site.findUnique({ where: { id: scopeId } });
+      if (!site || !assignScope.coversSite(site)) throw notFound('Scope');
+      return {
+        type: 'site',
+        id: site.id,
+        name: site.name,
+        covers: (scope) => scope.coversSite(site),
+      };
+    }
+    const department = await tx.department.findUnique({
+      where: { id: scopeId },
+      include: { site: { select: { companyId: true } } },
+    });
+    const location = department && {
+      id: department.id,
+      siteId: department.siteId,
+      companyId: department.site.companyId,
+    };
+    if (!department || !location || !assignScope.coversDepartment(location))
+      throw notFound('Scope');
+    return {
+      type: 'department',
+      id: department.id,
+      name: department.name,
+      covers: (scope) => scope.coversDepartment(location),
+    };
+  }
+
+  /** Anti-escalation on a scope: the caller holds there every permission of the role. */
+  private assertHoldsAllOn(
+    actor: Actor,
+    permissions: readonly PermissionKey[],
+    target: ScopeTarget,
+  ): void {
+    if (permissions.some((permission) => !target.covers(actor.scopeOf(permission)))) {
+      throw forbidden(
+        'missing_permissions',
+        'You cannot handle a role that carries permissions you do not hold on this scope',
+      );
+    }
   }
 
   private async replacePermissions(

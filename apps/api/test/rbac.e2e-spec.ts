@@ -43,6 +43,27 @@ describe('access control (RBAC)', () => {
   let adminRoleA: string;
   let adminRoleB: string;
 
+  /** Assignment ids by "user:role", for the tests that withdraw a role afterwards. */
+  const assignmentIds = new Map<string, string>();
+  const tenantIds = new Set<string>();
+
+  /** Finds the tenant-wide assignment of a role to a user, however it was created. */
+  async function assignmentIdOf(userId: string, roleId: string): Promise<string> {
+    const known = assignmentIds.get(`${userId}:${roleId}`);
+    if (known) return known;
+    for (const tenantId of tenantIds) {
+      const id = await asTenant(owner, tenantId, async () => {
+        const result = await owner.query<{ id: string }>(
+          `SELECT id FROM role_assignments WHERE user_id = $1 AND role_id = $2 AND scope_type = 'TENANT'`,
+          [userId, roleId],
+        );
+        return result.rows[0]?.id;
+      });
+      if (id) return id;
+    }
+    return uuidv7(); // No such assignment: the API answers "not found".
+  }
+
   const api = (token: string) => {
     const agent = request(app.getHttpServer());
     const auth = { Authorization: `Bearer ${token}` };
@@ -50,8 +71,26 @@ describe('access control (RBAC)', () => {
       get: (url: string) => agent.get(`/api/v1${url}`).set(auth),
       post: (url: string, body: object) => agent.post(`/api/v1${url}`).set(auth).send(body),
       patch: (url: string, body: object) => agent.patch(`/api/v1${url}`).set(auth).send(body),
-      put: (url: string) => agent.put(`/api/v1${url}`).set(auth),
       delete: (url: string) => agent.delete(`/api/v1${url}`).set(auth),
+      /** Assigns a role for the whole tenant and remembers the assignment id. */
+      assign: (userId: string, roleId: string) =>
+        agent
+          .post(`/api/v1/users/${userId}/role-assignments`)
+          .set(auth)
+          .send({ roleId })
+          .expect((response) => {
+            if (response.status === 201) assignmentIds.set(`${userId}:${roleId}`, response.body.id);
+          }),
+      /** Withdraws the tenant-wide assignment of a role and checks the status. */
+      unassign: async (userId: string, roleId: string, status: number) => {
+        const id = await assignmentIdOf(userId, roleId);
+        const response = await agent
+          .delete(`/api/v1/users/${userId}/role-assignments/${id}`)
+          .set(auth);
+        expect([`unassign ${userId}`, response.status]).toEqual([`unassign ${userId}`, status]);
+        if (status === 204) assignmentIds.delete(`${userId}:${roleId}`);
+        return response;
+      },
     };
   };
 
@@ -84,6 +123,7 @@ describe('access control (RBAC)', () => {
     nobodyA = await addUser(owner, adminA, 'nobody');
     memberA = await addUser(owner, adminA, 'member');
     adminB = await seedAccount(owner, 'rbac-bravo', { administrator: true });
+    tenantIds.add(adminA.tenantId).add(adminB.tenantId);
     app = await createTestApp({}, { controllers: [UndeclaredProbeController] });
     tokens['adminA'] = await tokenOf(adminA);
     tokens['nobodyA'] = await tokenOf(nobodyA);
@@ -172,8 +212,12 @@ describe('access control (RBAC)', () => {
         { method: 'patch', url: `/api/v1/roles/${roleOfA}`, body: { name: 'Renommé', version: 1 } },
         { method: 'delete', url: `/api/v1/roles/${roleOfA}` },
         { method: 'get', url: '/api/v1/users' },
-        { method: 'put', url: `/api/v1/users/${memberA.userId}/roles/${roleOfA}` },
-        { method: 'delete', url: `/api/v1/users/${memberA.userId}/roles/${roleOfA}` },
+        {
+          method: 'post',
+          url: `/api/v1/users/${memberA.userId}/role-assignments`,
+          body: { roleId: roleOfA },
+        },
+        { method: 'delete', url: `/api/v1/users/${memberA.userId}/role-assignments/${uuidv7()}` },
         { method: 'get', url: '/api/v1/audit-events' },
       ] as const;
       for (const endpoint of endpoints) {
@@ -195,7 +239,7 @@ describe('access control (RBAC)', () => {
       await api(token).post('/roles', { name: 'Nope', permissions: [] }).expect(403);
       await api(token).get('/users').expect(403);
       await api(token).get('/audit-events').expect(403);
-      await api(token).put(`/users/${memberA.userId}/roles/${roleOfA}`).expect(403);
+      await api(token).assign(memberA.userId, roleOfA).expect(403);
     });
 
     it('CC-1: a role of tenant A does not exist for an administrator of tenant B', async () => {
@@ -228,9 +272,9 @@ describe('access control (RBAC)', () => {
         [tokens['adminA'] as string, memberB.userId, roleOfA],
         [tokens['adminA'] as string, memberA.userId, roleOfB],
       ] as const) {
-        const response = await api(token).put(`/users/${userId}/roles/${roleId}`).expect(404);
+        const response = await api(token).assign(userId, roleId).expect(404);
         expect(response.body).toMatchObject({ code: 'NOT_FOUND' });
-        await api(token).delete(`/users/${userId}/roles/${roleId}`).expect(404);
+        await api(token).delete(`/users/${userId}/role-assignments/${uuidv7()}`).expect(404);
       }
     });
 
@@ -353,10 +397,10 @@ describe('access control (RBAC)', () => {
       const id = (
         await admin().post('/roles', { name: 'Encore utilisé', permissions: [] }).expect(201)
       ).body.id;
-      await admin().put(`/users/${memberA.userId}/roles/${id}`).expect(204);
+      await admin().assign(memberA.userId, id).expect(201);
       const response = await admin().delete(`/roles/${id}`).expect(409);
       expect(response.body).toMatchObject({ code: 'CONFLICT' });
-      await admin().delete(`/users/${memberA.userId}/roles/${id}`).expect(204);
+      await admin().unassign(memberA.userId, id, 204);
       await admin().delete(`/roles/${id}`).expect(204);
     });
 
@@ -386,14 +430,14 @@ describe('access control (RBAC)', () => {
     });
 
     it('nobody can assign a role to themselves, not even an administrator', async () => {
-      await api(managerToken).put(`/users/${manager.userId}/roles/${adminRoleA}`).expect(403);
+      await api(managerToken).assign(manager.userId, adminRoleA).expect(403);
       const anyRole = (
         await api(tokens['adminA'] as string)
           .post('/roles', { name: 'Auto', permissions: [] })
           .expect(201)
       ).body.id as string;
       await api(tokens['adminA'] as string)
-        .put(`/users/${adminA.userId}/roles/${anyRole}`)
+        .assign(adminA.userId, anyRole)
         .expect(403);
     });
 
@@ -436,19 +480,19 @@ describe('access control (RBAC)', () => {
           .expect(201)
       ).body.id as string;
 
-      await api(managerToken).put(`/users/${memberA.userId}/roles/${powerful}`).expect(403);
-      await api(managerToken).put(`/users/${memberA.userId}/roles/${adminRoleA}`).expect(403);
+      await api(managerToken).assign(memberA.userId, powerful).expect(403);
+      await api(managerToken).assign(memberA.userId, adminRoleA).expect(403);
       await api(managerToken)
         .patch(`/roles/${powerful}`, { permissions: [], version: 1 })
         .expect(403);
       await api(managerToken).delete(`/roles/${powerful}`).expect(403);
       // Nor take the administrator role away from the administrator.
-      await api(managerToken).delete(`/users/${adminA.userId}/roles/${adminRoleA}`).expect(403);
+      await api(managerToken).unassign(adminA.userId, adminRoleA, 403);
 
       const users = await api(tokens['adminA'] as string)
         .get('/users?search=member')
         .expect(200);
-      expect(users.body.items[0].roles).toEqual([]);
+      expect(users.body.items[0].assignments).toEqual([]);
     });
 
     it('can grant a role whose permissions they all hold', async () => {
@@ -457,9 +501,9 @@ describe('access control (RBAC)', () => {
           .post('/roles', { name: 'Modeste', permissions: [PERMISSIONS.ROLE_READ] })
           .expect(201)
       ).body.id as string;
-      await api(managerToken).put(`/users/${memberA.userId}/roles/${modest}`).expect(204);
-      await api(managerToken).put(`/users/${memberA.userId}/roles/${modest}`).expect(204); // idempotent
-      await api(managerToken).delete(`/users/${memberA.userId}/roles/${modest}`).expect(204);
+      await api(managerToken).assign(memberA.userId, modest).expect(201);
+      await api(managerToken).assign(memberA.userId, modest).expect(201); // idempotent
+      await api(managerToken).unassign(memberA.userId, modest, 204);
 
       const actions = await auditActions(adminA);
       expect(actions.filter((action) => action === 'role.assigned').length).toBeGreaterThanOrEqual(
@@ -484,7 +528,7 @@ describe('access control (RBAC)', () => {
 
       await api(token).get('/audit-events').expect(403);
 
-      await admin.put(`/users/${user.userId}/roles/${role}`).expect(204);
+      await admin.assign(user.userId, role).expect(201);
       await api(token).get('/audit-events').expect(200);
 
       // Editing the role itself is immediate too.
@@ -495,7 +539,7 @@ describe('access control (RBAC)', () => {
         .expect(200);
       await api(token).get('/audit-events').expect(200);
 
-      await admin.delete(`/users/${user.userId}/roles/${role}`).expect(204);
+      await admin.unassign(user.userId, role, 204);
       await api(token).get('/audit-events').expect(403);
     });
   });
@@ -505,7 +549,7 @@ describe('access control (RBAC)', () => {
   describe('last administrator', () => {
     it('the only administrator of a tenant cannot lose the role', async () => {
       const b = api(tokens['adminB'] as string);
-      const response = await b.delete(`/users/${adminB.userId}/roles/${adminRoleB}`).expect(409);
+      const response = await b.unassign(adminB.userId, adminRoleB, 409);
       expect(response.body).toMatchObject({ code: 'CONFLICT' });
       await b.get('/roles').expect(200); // still an administrator
     });
@@ -513,20 +557,21 @@ describe('access control (RBAC)', () => {
     it('with two administrators one can be withdrawn, then the last one is protected again', async () => {
       const b = api(tokens['adminB'] as string);
       const second = await addUser(owner, adminB, 'second');
-      await b.put(`/users/${second.userId}/roles/${adminRoleB}`).expect(204);
+      await b.assign(second.userId, adminRoleB).expect(201);
       const secondToken = await tokenOf(second);
 
       // The second administrator withdraws the first one.
-      await api(secondToken).delete(`/users/${adminB.userId}/roles/${adminRoleB}`).expect(204);
+      await api(secondToken).unassign(adminB.userId, adminRoleB, 204);
       await b.get('/roles').expect(403);
-      await api(secondToken).delete(`/users/${second.userId}/roles/${adminRoleB}`).expect(409);
+      await api(secondToken).unassign(second.userId, adminRoleB, 409);
 
       // Restore the first administrator for the other tests.
-      await api(secondToken).put(`/users/${adminB.userId}/roles/${adminRoleB}`).expect(204);
+      await api(secondToken).assign(adminB.userId, adminRoleB).expect(201);
     });
 
     it('a disabled administrator does not count as an administrator', async () => {
       const tenant = await seedAccount(owner, 'rbac-charlie', { administrator: true });
+      tenantIds.add(tenant.tenantId);
       const spare = await addUser(owner, tenant, 'spare', { administrator: true });
       const role = await systemRoleOf(tenant);
       await asTenant(owner, tenant.tenantId, () =>
@@ -534,7 +579,7 @@ describe('access control (RBAC)', () => {
       );
       const token = await tokenOf(tenant);
 
-      await api(token).delete(`/users/${tenant.userId}/roles/${role}`).expect(409);
+      await api(token).unassign(tenant.userId, role, 409);
     });
   });
 
@@ -549,7 +594,14 @@ describe('access control (RBAC)', () => {
       expect(self).toMatchObject({
         email: adminA.email,
         status: 'ACTIVE',
-        roles: [{ referenceKey: 'administrator', isSystem: true }],
+        assignments: [
+          {
+            role: expect.objectContaining({ referenceKey: 'administrator', isSystem: true }),
+            scopeType: 'tenant',
+            scopeId: null,
+            scopeName: null,
+          },
+        ],
       });
       // Never any credential material.
       expect(JSON.stringify(all.body)).not.toMatch(/password|hash|argon/i);

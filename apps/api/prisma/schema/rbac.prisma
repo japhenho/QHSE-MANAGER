@@ -41,21 +41,46 @@ model RolePermission {
   @@map("role_permissions")
 }
 
-/// A role given to a user, for the whole tenant (narrower scopes come with lot P1-07).
+/// Where a role applies. A scope covers what it contains: a company covers its sites,
+/// a site covers its departments. New kinds (project, contract) are added here together
+/// with their column, when the first module that needs them is built.
+enum AccessScopeType {
+  TENANT
+  COMPANY
+  SITE
+  DEPARTMENT
+
+  @@map("access_scope_type")
+}
+
+/// A role given to a user on a scope: the whole tenant, one company, one site or one
+/// department. Several assignments add up (union of scopes).
 model RoleAssignment {
-  id         String   @id @db.Uuid
-  tenantId   String   @map("tenant_id") @db.Uuid
-  userId     String   @map("user_id") @db.Uuid
-  roleId     String   @map("role_id") @db.Uuid
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  id           String          @id @db.Uuid
+  tenantId     String          @map("tenant_id") @db.Uuid
+  userId       String          @map("user_id") @db.Uuid
+  roleId       String          @map("role_id") @db.Uuid
+  scopeType    AccessScopeType @default(TENANT) @map("scope_type")
+  companyId    String?         @map("company_id") @db.Uuid
+  siteId       String?         @map("site_id") @db.Uuid
+  departmentId String?         @map("department_id") @db.Uuid
+  /// "tenant", or the id of the scope entity. Makes "one assignment per user, role and
+  /// scope" a plain unique constraint.
+  scopeKey     String          @default("tenant") @map("scope_key")
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
   /// Who granted it; NULL when granted by the provisioning command.
-  assignedBy String?  @map("assigned_by") @db.Uuid
+  assignedBy   String?         @map("assigned_by") @db.Uuid
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  user   User   @relation(fields: [tenantId, userId], references: [tenantId, id], onDelete: Restrict)
-  role   Role   @relation(fields: [tenantId, roleId], references: [tenantId, id], onDelete: Restrict)
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  user       User        @relation(fields: [tenantId, userId], references: [tenantId, id], onDelete: Restrict)
+  role       Role        @relation(fields: [tenantId, roleId], references: [tenantId, id], onDelete: Restrict)
+  /// Composite keys: the scope always belongs to the tenant of the assignment.
+  company    Company?    @relation(fields: [tenantId, companyId], references: [tenantId, id], onDelete: Restrict)
+  site       Site?       @relation(fields: [tenantId, siteId], references: [tenantId, id], onDelete: Restrict)
+  department Department? @relation(fields: [tenantId, departmentId], references: [tenantId, id], onDelete: Restrict)
 
-  @@unique([tenantId, userId, roleId])
+  @@unique([tenantId, userId, roleId, scopeKey])
   @@index([tenantId, roleId])
+  @@index([tenantId, userId])
   @@map("role_assignments")
 }

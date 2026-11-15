@@ -42,7 +42,12 @@ export async function addUser(
   owner: pg.Client,
   tenant: Pick<Account, 'organization' | 'tenantId'>,
   localPart: string,
-  options: { administrator?: boolean; permissions?: readonly PermissionKey[] } = {},
+  options: {
+    administrator?: boolean;
+    permissions?: readonly PermissionKey[];
+    /** Where the permissions apply; the whole tenant when absent. */
+    scope?: TestScope;
+  } = {},
 ): Promise<Account> {
   const email = `${localPart}@${tenant.organization}.example.test`;
   const password = `demo-password-${tenant.organization}`;
@@ -57,15 +62,27 @@ export async function addUser(
     hashPassword,
   );
   const account = { ...tenant, userId: user.id, email, password };
-  if (options.permissions) await grantPermissions(owner, account, options.permissions);
+  if (options.permissions) {
+    await grantPermissions(owner, account, options.permissions, options.scope);
+  }
   return account;
 }
 
-/** Gives a user exactly these permissions, through a dedicated role. Returns the role id. */
+/** A company, a site or a department a role is limited to. */
+export interface TestScope {
+  type: 'company' | 'site' | 'department';
+  id: string;
+}
+
+/**
+ * Gives a user exactly these permissions, through a dedicated role, for the whole tenant
+ * or on one scope. Call it several times to cumulate scopes. Returns the role id.
+ */
 export async function grantPermissions(
   owner: pg.Client,
   account: Pick<Account, 'tenantId' | 'userId'>,
   permissions: readonly PermissionKey[],
+  scope?: TestScope,
 ): Promise<string> {
   const roleId = uuidv7();
   await owner.query('BEGIN');
@@ -83,8 +100,20 @@ export async function grantPermissions(
       );
     }
     await owner.query(
-      'INSERT INTO role_assignments (id, tenant_id, user_id, role_id) VALUES ($1, $2, $3, $4)',
-      [uuidv7(), account.tenantId, account.userId, roleId],
+      `INSERT INTO role_assignments
+         (id, tenant_id, user_id, role_id, scope_type, scope_key, company_id, site_id, department_id)
+       VALUES ($1, $2, $3, $4, $5::access_scope_type, $6, $7, $8, $9)`,
+      [
+        uuidv7(),
+        account.tenantId,
+        account.userId,
+        roleId,
+        scope ? scope.type.toUpperCase() : 'TENANT',
+        scope?.id ?? 'tenant',
+        scope?.type === 'company' ? scope.id : null,
+        scope?.type === 'site' ? scope.id : null,
+        scope?.type === 'department' ? scope.id : null,
+      ],
     );
     await owner.query('COMMIT');
   } catch (error) {

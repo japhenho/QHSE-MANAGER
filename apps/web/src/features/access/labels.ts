@@ -35,6 +35,7 @@ const REASON_LABELS = {
   self_assignment: 'access.errors.self_assignment',
   last_administrator: 'access.errors.last_administrator',
   role_name_taken: 'access.errors.role_name_taken',
+  outside_scope: 'access.errors.outside_scope',
 } as const satisfies Record<AccessErrorReason, string>;
 
 /** Reference roles are shown in the user's language; roles created by the tenant keep their name. */

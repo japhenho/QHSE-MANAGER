@@ -80,3 +80,29 @@ export async function expectListExcludes(
   expect(response.body.total).toBe(response.body.items.length);
   return response.body;
 }
+
+/**
+ * Scope test for an endpoint addressing ONE resource located in the organisation:
+ * a user of the SAME tenant who holds the permission, but on another scope, gets
+ * exactly the answer given for an identifier that does not exist (404 NOT_FOUND).
+ * `unknownUrl` is the same endpoint with a random, non-existent identifier.
+ */
+export const expectInvisibleOutsideScope = expectInvisibleAcrossTenants;
+
+/**
+ * Scope test for a LIST endpoint: called by a user whose scope does not cover them, the
+ * list contains none of the given identifiers and its total does not count them, while
+ * it still contains `visibleIds` (the scope is a filter, not a refusal).
+ */
+export async function expectListLimitedToScope(
+  app: TestApp,
+  url: string,
+  scopedToken: string,
+  expected: { visibleIds: readonly string[]; hiddenIds: readonly string[] },
+): Promise<void> {
+  const body = await expectListExcludes(app, url, scopedToken, expected.hiddenIds);
+  expect([url, body.items.map((item) => item.id).sort()]).toEqual([
+    url,
+    [...expected.visibleIds].sort(),
+  ]);
+}

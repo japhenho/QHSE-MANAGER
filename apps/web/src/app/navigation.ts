@@ -54,6 +54,8 @@ export interface NavItem {
    * server alone decides what is allowed.
    */
   readonly permission?: PermissionKey;
+  /** True when holding the permission on any scope (a site, a department…) is enough. */
+  readonly anyScope?: boolean;
 }
 
 /** Path of one role's page. */
@@ -82,6 +84,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     labelKey: 'nav.organization',
     icon: BuildingIcon,
     permission: PERMISSIONS.ORGANIZATION_READ,
+    anyScope: true,
   },
   {
     id: 'roles',

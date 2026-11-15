@@ -48,10 +48,19 @@ export function useAuth(): AuthState {
  * Returns a function telling whether the signed-in user holds a permission. Use it to
  * hide what the user cannot do; never as a security control — the server checks.
  */
-export function usePermissions(): (permission: PermissionKey) => boolean {
+export function usePermissions(): (
+  permission: PermissionKey,
+  options?: { anywhere?: boolean },
+) => boolean {
   const auth = useAuth();
-  const held = auth.status === 'authenticated' ? auth.identity.permissions : [];
-  return (permission) => held.includes(permission);
+  const identity = auth.status === 'authenticated' ? auth.identity : undefined;
+  // By default a permission counts when held for the whole tenant. `anywhere` also
+  // accepts one held on a narrower scope (a company, a site, a department): use it for
+  // screens whose content the server filters by scope.
+  return (permission, options) =>
+    (options?.anywhere ? identity?.permissionsAnywhere : identity?.permissions)?.includes(
+      permission,
+    ) ?? false;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -73,17 +82,23 @@ function parseSession(data: unknown): AuthSessionResponse {
     throw new TypeError('session.tenant');
   }
   // Unknown keys (a newer server) are ignored rather than trusted.
-  const permissions = Array.isArray(data['permissions'])
-    ? data['permissions'].filter(isPermissionKey)
-    : [];
-  return { ...(data as unknown as AuthSessionResponse), permissions };
+  const keys = (value: unknown) => (Array.isArray(value) ? value.filter(isPermissionKey) : []);
+  const permissions = keys(data['permissions']);
+  // A permission held for the whole tenant is, by definition, held somewhere.
+  const permissionsAnywhere = [...new Set([...permissions, ...keys(data['permissionsAnywhere'])])];
+  return { ...(data as unknown as AuthSessionResponse), permissions, permissionsAnywhere };
 }
 
 function accept(session: AuthSessionResponse): string {
   setState(
     {
       status: 'authenticated',
-      identity: { user: session.user, tenant: session.tenant, permissions: session.permissions },
+      identity: {
+        user: session.user,
+        tenant: session.tenant,
+        permissions: session.permissions,
+        permissionsAnywhere: session.permissionsAnywhere,
+      },
     },
     session.accessToken,
   );

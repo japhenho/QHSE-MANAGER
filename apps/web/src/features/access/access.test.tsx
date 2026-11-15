@@ -2,7 +2,13 @@ import { PERMISSIONS, type RoleSummary, type UserSummary } from '@qhse/shared';
 import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { translations } from '../../i18n/locales';
-import { identityWith, jsonResponse, renderApp, TEST_IDENTITY } from '../../test/render-app';
+import {
+  identityWith,
+  jsonResponse,
+  renderApp,
+  scopedIdentity,
+  TEST_IDENTITY,
+} from '../../test/render-app';
 
 const fr = translations.fr;
 const en = translations.en;
@@ -27,21 +33,36 @@ const SHIFT_ROLE: RoleSummary = {
   assignedUserCount: 0,
   version: 3,
 };
-const USERS: UserSummary[] = [
-  {
-    ...TEST_IDENTITY.user,
-    status: 'ACTIVE',
-    roles: [
-      { id: ADMIN_ROLE.id, name: 'Administrateur', referenceKey: 'administrator', isSystem: true },
-    ],
+const ADMIN_ASSIGNMENT = {
+  id: '0193a000-0000-7000-8000-0000000000a1',
+  role: {
+    id: ADMIN_ROLE.id,
+    name: 'Administrateur',
+    referenceKey: 'administrator',
+    isSystem: true,
   },
+  scopeType: 'tenant',
+  scopeId: null,
+  scopeName: null,
+} as const;
+const SITE_ASSIGNMENT = {
+  id: '0193a000-0000-7000-8000-0000000000a2',
+  role: { id: SHIFT_ROLE.id, name: 'Chef de quart', referenceKey: null, isSystem: false },
+  scopeType: 'site',
+  scopeId: '0193a000-0000-7000-8000-0000000000s1',
+  scopeName: 'Terminal de Djeno',
+} as const;
+const OPERATOR_ID = '0193a000-0000-7000-8000-0000000000u2';
+const USERS: UserSummary[] = [
+  { ...TEST_IDENTITY.user, status: 'ACTIVE', assignments: [ADMIN_ASSIGNMENT] },
   {
-    id: '0193a000-0000-7000-8000-0000000000u2',
+    id: OPERATOR_ID,
     email: 'operator@example.test',
     status: 'ACTIVE',
-    roles: [],
+    assignments: [SITE_ASSIGNMENT],
   },
 ];
+const SITE_OPTION = { id: SITE_ASSIGNMENT.scopeId, name: 'Terminal de Djeno' };
 
 const page = <T,>(items: T[]) =>
   jsonResponse({ items, page: 1, pageSize: 25, total: items.length });
@@ -85,6 +106,18 @@ afterEach(() => {
 });
 
 describe('navigation and access', () => {
+  it('a role limited to a site opens the organisation, not the tenant-level screens', async () => {
+    renderApp('/', {
+      status: 'authenticated',
+      identity: scopedIdentity([PERMISSIONS.ORGANIZATION_READ, PERMISSIONS.ROLE_READ]),
+    });
+    const nav = await screen.findByRole('navigation', { name: fr.nav.label });
+
+    expect(within(nav).getByRole('link', { name: fr.nav.organization })).toBeInTheDocument();
+    // Roles are managed for the whole organisation: a site-level right does not show them.
+    expect(within(nav).queryByRole('link', { name: fr.nav.roles })).not.toBeInTheDocument();
+  });
+
   it('shows only the menu entries the user has the permission for', async () => {
     renderApp('/', {
       status: 'authenticated',
@@ -261,41 +294,121 @@ describe('users', () => {
   const handlers = {
     'GET /users': () => page(USERS),
     'GET /roles': () => page([ADMIN_ROLE, SHIFT_ROLE]),
+    'GET /companies': () =>
+      page([{ id: '0193a000-0000-7000-8000-0000000000c1', name: 'ACME Congo' }]),
+    'GET /sites': () => page([SITE_OPTION]),
+    'GET /departments': () => page([]),
   };
+  const removeLabel = (email: string, role: string, scope: string) =>
+    fr.users.removeAssignment
+      .replace('{{email}}', email)
+      .replace('{{role}}', role)
+      .replace('{{scope}}', scope);
 
-  it('lists users with their roles and assigns a role', async () => {
+  it('shows each role with the scope it applies to', async () => {
+    stubApi(handlers);
+    renderApp('/users');
+
+    const operator = (await screen.findByText('operator@example.test')).closest(
+      'li',
+    ) as HTMLElement;
+    const held = within(operator).getByRole('list', {
+      name: fr.users.rolesOf.replace('{{email}}', 'operator@example.test'),
+    });
+    expect(within(held).getByText('Chef de quart')).toBeInTheDocument();
+    expect(
+      within(held).getByText(
+        new RegExp(fr.access.scopes.onSite.replace('{{name}}', 'Terminal de Djeno')),
+      ),
+    ).toBeInTheDocument();
+    // The user's own e-mail also shows in the top bar: target their list of roles.
+    const self = screen.getByRole('list', {
+      name: fr.users.rolesOf.replace('{{email}}', TEST_IDENTITY.user.email),
+    });
+    expect(within(self).getByText(new RegExp(fr.access.scopes.tenant))).toBeInTheDocument();
+  });
+
+  it('assigns a role for the whole organisation by default', async () => {
     const calls = stubApi({
       ...handlers,
-      [`PUT /users/${USERS[1]?.id}/roles/${SHIFT_ROLE.id}`]: () =>
+      [`POST /users/${OPERATOR_ID}/role-assignments`]: () => jsonResponse(ADMIN_ASSIGNMENT, 201),
+    });
+    const { user } = renderApp('/users');
+
+    // One "add a role" control: none is offered on the user's own row.
+    await screen.findByRole('option', { name: 'Chef de quart' });
+    expect(screen.getAllByLabelText(fr.users.role)).toHaveLength(1);
+    expect(screen.getByRole('button', { name: fr.users.add })).toBeDisabled();
+
+    await user.selectOptions(screen.getByLabelText(fr.users.role), 'Chef de quart');
+    await user.click(screen.getByRole('button', { name: fr.users.add }));
+
+    await waitFor(() => expect(calls.some((call) => call.method === 'POST')).toBe(true));
+    expect(calls.find((call) => call.method === 'POST')?.body).toEqual({
+      roleId: SHIFT_ROLE.id,
+      scopeType: 'tenant',
+    });
+  });
+
+  it('assigns a role on one site only', async () => {
+    const calls = stubApi({
+      ...handlers,
+      [`POST /users/${OPERATOR_ID}/role-assignments`]: () => jsonResponse(SITE_ASSIGNMENT, 201),
+    });
+    const { user } = renderApp('/users');
+
+    await screen.findByRole('option', { name: 'Chef de quart' });
+    await user.selectOptions(screen.getByLabelText(fr.users.role), 'Chef de quart');
+    await user.selectOptions(screen.getByLabelText(fr.access.scopes.label), fr.access.scopes.site);
+    // The scope item is required before the role can be added.
+    expect(screen.getByRole('button', { name: fr.users.add })).toBeDisabled();
+    await user.selectOptions(screen.getByLabelText(fr.users.scopeEntity), 'Terminal de Djeno');
+    await user.click(screen.getByRole('button', { name: fr.users.add }));
+
+    await waitFor(() => expect(calls.some((call) => call.method === 'POST')).toBe(true));
+    expect(calls.find((call) => call.method === 'POST')?.body).toEqual({
+      roleId: SHIFT_ROLE.id,
+      scopeType: 'site',
+      scopeId: SITE_OPTION.id,
+    });
+  });
+
+  it('withdraws one assignment, identified with its scope', async () => {
+    const calls = stubApi({
+      ...handlers,
+      [`DELETE /users/${OPERATOR_ID}/role-assignments/${SITE_ASSIGNMENT.id}`]: () =>
         new Response(null, { status: 204 }),
     });
     const { user } = renderApp('/users');
 
-    expect(await screen.findByText('operator@example.test')).toBeInTheDocument();
-    expect(screen.getByText(fr.users.noRole)).toBeInTheDocument();
+    await user.click(
+      await screen.findByRole('button', {
+        name: removeLabel(
+          'operator@example.test',
+          'Chef de quart',
+          fr.access.scopes.onSite.replace('{{name}}', 'Terminal de Djeno'),
+        ),
+      }),
+    );
 
-    // One "add a role" control: none is offered on the user's own row.
-    const selects = await screen.findAllByRole('combobox');
-    expect(selects).toHaveLength(1);
-    await user.selectOptions(selects[0] as HTMLElement, 'Chef de quart');
-    await user.click(screen.getByRole('button', { name: fr.users.add }));
-
-    await waitFor(() => expect(calls.some((call) => call.method === 'PUT')).toBe(true));
+    await waitFor(() => expect(calls.some((call) => call.method === 'DELETE')).toBe(true));
   });
 
   it('explains why the last administrator cannot lose the role', async () => {
     stubApi({
       ...handlers,
-      [`DELETE /users/${TEST_IDENTITY.user.id}/roles/${ADMIN_ROLE.id}`]: () =>
+      [`DELETE /users/${TEST_IDENTITY.user.id}/role-assignments/${ADMIN_ASSIGNMENT.id}`]: () =>
         apiError(409, 'CONFLICT', 'last_administrator'),
     });
     const { user } = renderApp('/users');
 
     await user.click(
       await screen.findByRole('button', {
-        name: fr.users.removeRole
-          .replace('{{role}}', fr.access.referenceRoles.administrator)
-          .replace('{{email}}', TEST_IDENTITY.user.email),
+        name: removeLabel(
+          TEST_IDENTITY.user.email,
+          fr.access.referenceRoles.administrator,
+          fr.access.scopes.tenant,
+        ),
       }),
     );
 
@@ -311,7 +424,22 @@ describe('users', () => {
 
     expect(await screen.findByText('operator@example.test')).toBeInTheDocument();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Retirer le rôle/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Retirer/ })).not.toBeInTheDocument();
+  });
+
+  it('offers only the whole organisation as a scope to someone who cannot read the organisation', async () => {
+    stubApi({ 'GET /users': () => page(USERS), 'GET /roles': () => page([SHIFT_ROLE]) });
+    renderApp('/users', {
+      status: 'authenticated',
+      identity: identityWith([
+        PERMISSIONS.USER_READ,
+        PERMISSIONS.ROLE_READ,
+        PERMISSIONS.ROLE_ASSIGN,
+      ]),
+    });
+
+    await screen.findByRole('option', { name: 'Chef de quart' });
+    expect(screen.queryByLabelText(fr.access.scopes.label)).not.toBeInTheDocument();
   });
 
   it('searches by e-mail', async () => {

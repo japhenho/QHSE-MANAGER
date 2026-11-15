@@ -37,10 +37,16 @@ export interface CurrentUserResponse {
   user: AuthenticatedUser;
   tenant: AuthenticatedTenant;
   /**
-   * What the user may do, for display purposes (hide a menu, disable a button).
-   * The server checks every request by itself; this list grants nothing.
+   * Permissions held for the WHOLE tenant. For display purposes only (hide a menu,
+   * disable a button): the server checks every request by itself.
    */
   permissions: PermissionKey[];
+  /**
+   * Permissions held on at least one scope (the whole tenant, a company, a site or a
+   * department). A superset of `permissions`, for the screens whose content is filtered
+   * by scope.
+   */
+  permissionsAnywhere: PermissionKey[];
 }
 
 /** `POST /auth/login` and `POST /auth/refresh` */

@@ -120,7 +120,8 @@ function EntityForm({ kind, entity }: { kind: EntityKind; entity?: EntityView })
   const [saved, setSaved] = useState(false);
 
   const archived = entity?.archivedAt != null;
-  const canManage = can(PERMISSIONS.ORGANIZATION_MANAGE);
+  // The server decides whether this very record is within the user's scope.
+  const canManage = can(PERMISSIONS.ORGANIZATION_MANAGE, { anywhere: true });
   const editable = canManage && !archived;
   const dirty = config.fields.some((field) => values[field] !== baseline[field]);
 

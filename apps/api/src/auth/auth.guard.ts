@@ -1,10 +1,10 @@
 import { type CanActivate, type ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import type { PermissionKey } from '@qhse/shared';
 import type { Request } from 'express';
 import {
   type Actor,
   AUTHENTICATED_ONLY_KEY,
+  type PermissionRequirement,
   REQUIRED_PERMISSION_KEY,
 } from './access.decorators.js';
 import { AccessTokenService } from './access-token.service.js';
@@ -21,7 +21,8 @@ const BEARER = /^Bearer ([A-Za-z0-9._-]+)$/;
  *  1. a route marked `@Public()` is open;
  *  2. any other route needs a valid access token of a live session (401 otherwise);
  *  3. it must then declare `@RequirePermission(...)`, held by the caller through their
- *     roles, or `@AuthenticatedOnly()`. A route that declares nothing is refused (403).
+ *     roles — for the whole tenant, or on some scope when the route filters by scope —
+ *     or `@AuthenticatedOnly()`. A route that declares nothing is refused (403).
  * Session and permissions are read from the database on every request: a logout, a
  * disabled account or a removed role takes effect immediately.
  * The identity attached to the request is the only source of the tenant afterwards.
@@ -45,10 +46,11 @@ export class AuthGuard implements CanActivate {
 
     const claims = await this.accessTokens.verify(token);
     if (!claims) throw unauthenticated();
-    const permissions = await this.auth.loadSessionPermissions(claims);
-    if (permissions === null) throw unauthenticated();
+    const grants = await this.auth.loadSessionGrants(claims);
+    if (grants === null) throw unauthenticated();
+    const permissions = grants.tenantWide();
 
-    const required = this.reflector.getAllAndOverride<PermissionKey | undefined>(
+    const required = this.reflector.getAllAndOverride<PermissionRequirement | undefined>(
       REQUIRED_PERMISSION_KEY,
       targets,
     );
@@ -56,10 +58,19 @@ export class AuthGuard implements CanActivate {
       AUTHENTICATED_ONLY_KEY,
       targets,
     );
-    const allowed = required !== undefined ? permissions.has(required) : authenticatedOnly === true;
+    let allowed = authenticatedOnly === true;
+    if (required !== undefined) {
+      allowed = required.scoped
+        ? !grants.scopeOf(required.permission).isEmpty
+        : permissions.has(required.permission);
+    }
     if (!allowed) throw forbidden();
 
-    request.auth = { ...claims, permissions };
+    request.auth = {
+      ...claims,
+      permissions,
+      scopeOf: (permission) => grants.scopeOf(permission),
+    };
     return true;
   }
 }

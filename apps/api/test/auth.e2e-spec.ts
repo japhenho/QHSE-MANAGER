@@ -77,6 +77,7 @@ describe('authentication (ADR 0003)', () => {
         tenant: { id: alpha.tenantId, slug: 'auth-alpha', name: 'auth-alpha (DEMO)' },
         // No role yet: the account can log in but may do nothing else.
         permissions: [],
+        permissionsAnywhere: [],
       });
       expect(response.headers['cache-control']).toBe('no-store');
 
@@ -106,6 +107,7 @@ describe('authentication (ADR 0003)', () => {
         user: { id: alpha.userId, email: alpha.email },
         tenant: { id: alpha.tenantId, slug: 'auth-alpha', name: 'auth-alpha (DEMO)' },
         permissions: [],
+        permissionsAnywhere: [],
       });
     });
 

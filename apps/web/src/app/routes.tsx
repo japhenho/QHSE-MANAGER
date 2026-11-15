@@ -61,7 +61,7 @@ export const routes: RouteObject[] = [
                 ...lazyPage(() => import('../features/system-status/SystemStatusPage')),
               },
               {
-                element: <RequirePermission permission={PERMISSIONS.ORGANIZATION_READ} />,
+                element: <RequirePermission permission={PERMISSIONS.ORGANIZATION_READ} anyScope />,
                 children: [
                   {
                     path: ROUTES.organization,
@@ -76,7 +76,9 @@ export const routes: RouteObject[] = [
                 ],
               },
               {
-                element: <RequirePermission permission={PERMISSIONS.ORGANIZATION_MANAGE} />,
+                element: (
+                  <RequirePermission permission={PERMISSIONS.ORGANIZATION_MANAGE} anyScope />
+                ),
                 children: [
                   { path: ROUTES.companyNew, ...organizationPage('CompanyFormPage') },
                   { path: ROUTES.siteNew, ...organizationPage('SiteFormPage') },

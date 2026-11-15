@@ -1,17 +1,9 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  Param,
-  Patch,
-  Post,
-  Put,
-  Query,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
+  type AssignRoleRequest,
+  assignRoleSchema,
+  type RoleAssignmentView,
   type CreateRoleRequest,
   createRoleSchema,
   type Paginated,
@@ -99,27 +91,28 @@ export class UsersController {
     return this.rbac.listUsers(query);
   }
 
-  @Put(':userId/roles/:roleId')
-  @HttpCode(204)
-  @RequirePermission(PERMISSIONS.ROLE_ASSIGN)
-  @ApiOperation({ summary: 'Assign a role to a user (idempotent)' })
+  @Post(':userId/role-assignments')
+  @RequirePermission(PERMISSIONS.ROLE_ASSIGN, { scoped: true })
+  @ApiOperation({
+    summary: 'Assign a role to a user on a scope: tenant, company, site or department (idempotent)',
+  })
   assign(
     @CurrentActor() actor: Actor,
     @Param('userId', uuidParam) userId: string,
-    @Param('roleId', uuidParam) roleId: string,
-  ): Promise<void> {
-    return this.rbac.assignRole(actor, userId, roleId);
+    @Body(new ZodValidationPipe(assignRoleSchema)) body: AssignRoleRequest,
+  ): Promise<RoleAssignmentView> {
+    return this.rbac.assignRole(actor, userId, body);
   }
 
-  @Delete(':userId/roles/:roleId')
+  @Delete(':userId/role-assignments/:assignmentId')
   @HttpCode(204)
-  @RequirePermission(PERMISSIONS.ROLE_ASSIGN)
-  @ApiOperation({ summary: 'Withdraw a role from a user (idempotent)' })
+  @RequirePermission(PERMISSIONS.ROLE_ASSIGN, { scoped: true })
+  @ApiOperation({ summary: 'Withdraw a role assignment from a user' })
   unassign(
     @CurrentActor() actor: Actor,
     @Param('userId', uuidParam) userId: string,
-    @Param('roleId', uuidParam) roleId: string,
+    @Param('assignmentId', uuidParam) assignmentId: string,
   ): Promise<void> {
-    return this.rbac.unassignRole(actor, userId, roleId);
+    return this.rbac.unassignRole(actor, userId, assignmentId);
   }
 }

@@ -142,5 +142,6 @@ export const ORGANIZATION_ERROR_REASONS = [
   'has_active_children',
   'parent_archived',
   'archived',
+  'outside_scope',
 ] as const;
 export type OrganizationErrorReason = (typeof ORGANIZATION_ERROR_REASONS)[number];

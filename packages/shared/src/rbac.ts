@@ -37,6 +37,26 @@ export type UpdateRoleRequest = z.infer<typeof updateRoleSchema>;
 
 export const uuidParamSchema = z.uuid();
 
+/**
+ * Where a role applies. A scope covers what it contains: a company covers its sites and
+ * their departments, a site covers its departments, the tenant covers everything.
+ */
+export const ACCESS_SCOPE_TYPES = ['tenant', 'company', 'site', 'department'] as const;
+export type AccessScopeType = (typeof ACCESS_SCOPE_TYPES)[number];
+
+export const assignRoleSchema = z
+  .strictObject({
+    roleId: z.uuid(),
+    scopeType: z.enum(ACCESS_SCOPE_TYPES).default('tenant'),
+    /** Company, site or department the role applies to; absent for the whole tenant. */
+    scopeId: z.uuid().optional(),
+  })
+  .refine((value) => (value.scopeType === 'tenant') === (value.scopeId === undefined), {
+    message: 'scopeId is required for a company, site or department scope, and only then',
+    path: ['scopeId'],
+  });
+export type AssignRoleRequest = z.infer<typeof assignRoleSchema>;
+
 /** Stable reasons carried in `details.reason` of access-management errors. */
 export const ACCESS_ERROR_REASONS = [
   'missing_permissions',
@@ -46,6 +66,7 @@ export const ACCESS_ERROR_REASONS = [
   'self_assignment',
   'last_administrator',
   'role_name_taken',
+  'outside_scope',
 ] as const;
 export type AccessErrorReason = (typeof ACCESS_ERROR_REASONS)[number];
 
@@ -68,11 +89,22 @@ export interface UserRoleRef {
   isSystem: boolean;
 }
 
+/** A role given to a user on a scope. */
+export interface RoleAssignmentView {
+  id: string;
+  role: UserRoleRef;
+  scopeType: AccessScopeType;
+  /** Null for the whole tenant. */
+  scopeId: string | null;
+  /** Name of the company, site or department; null for the whole tenant. */
+  scopeName: string | null;
+}
+
 export interface UserSummary {
   id: string;
   email: string;
   status: 'ACTIVE' | 'DISABLED';
-  roles: UserRoleRef[];
+  assignments: RoleAssignmentView[];
 }
 
 export const userListQuerySchema = paginationQuerySchema.extend({

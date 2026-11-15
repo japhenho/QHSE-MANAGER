@@ -34,6 +34,7 @@ const id = new ZodValidationPipe(uuidParamSchema);
 const READ = PERMISSIONS.ORGANIZATION_READ;
 const MANAGE = PERMISSIONS.ORGANIZATION_MANAGE;
 
+// Every route is `scoped`: the service filters reads and writes by the caller's scope.
 // No DELETE route exists on purpose: records are archived, never physically deleted.
 
 @ApiTags('organization')
@@ -43,22 +44,23 @@ export class CompaniesController {
   constructor(private readonly organization: OrganizationService) {}
 
   @Get()
-  @RequirePermission(READ)
+  @RequirePermission(READ, { scoped: true })
   @ApiOperation({ summary: 'List companies (archived ones hidden by default)' })
   list(
+    @CurrentActor() actor: Actor,
     @Query(new ZodValidationPipe(companyListQuerySchema)) query: CompanyListQuery,
   ): Promise<Paginated<CompanyView>> {
-    return this.organization.listCompanies(query);
+    return this.organization.listCompanies(actor, query);
   }
 
   @Get(':id')
-  @RequirePermission(READ)
-  get(@Param('id', id) companyId: string): Promise<CompanyView> {
-    return this.organization.getCompany(companyId);
+  @RequirePermission(READ, { scoped: true })
+  get(@CurrentActor() actor: Actor, @Param('id', id) companyId: string): Promise<CompanyView> {
+    return this.organization.getCompany(actor, companyId);
   }
 
   @Post()
-  @RequirePermission(MANAGE)
+  @RequirePermission(MANAGE, { scoped: true })
   create(
     @CurrentActor() actor: Actor,
     @Body(new ZodValidationPipe(createCompanySchema)) body: CreateCompanyRequest,
@@ -67,7 +69,7 @@ export class CompaniesController {
   }
 
   @Patch(':id')
-  @RequirePermission(MANAGE)
+  @RequirePermission(MANAGE, { scoped: true })
   update(
     @CurrentActor() actor: Actor,
     @Param('id', id) companyId: string,
@@ -78,7 +80,7 @@ export class CompaniesController {
 
   @Post(':id/archive')
   @HttpCode(200)
-  @RequirePermission(MANAGE)
+  @RequirePermission(MANAGE, { scoped: true })
   @ApiOperation({ summary: 'Archive a company (idempotent)' })
   archive(@CurrentActor() actor: Actor, @Param('id', id) companyId: string): Promise<CompanyView> {
     return this.organization.archiveCompany(actor, companyId);
@@ -86,10 +88,10 @@ export class CompaniesController {
 
   @Post(':id/restore')
   @HttpCode(200)
-  @RequirePermission(MANAGE)
+  @RequirePermission(MANAGE, { scoped: true })
   @ApiOperation({ summary: 'Restore an archived company (idempotent)' })
-  restore(@Param('id', id) companyId: string): Promise<CompanyView> {
-    return this.organization.restoreCompany(companyId);
+  restore(@CurrentActor() actor: Actor, @Param('id', id) companyId: string): Promise<CompanyView> {
+    return this.organization.restoreCompany(actor, companyId);
   }
 }
 
@@ -100,22 +102,23 @@ export class SitesController {
   constructor(private readonly organization: OrganizationService) {}
 
   @Get()
-  @RequirePermission(READ)
+  @RequirePermission(READ, { scoped: true })
   @ApiOperation({ summary: 'List sites (archived ones hidden by default)' })
   list(
+    @CurrentActor() actor: Actor,
     @Query(new ZodValidationPipe(siteListQuerySchema)) query: SiteListQuery,
   ): Promise<Paginated<SiteView>> {
-    return this.organization.listSites(query);
+    return this.organization.listSites(actor, query);
   }
 
   @Get(':id')
-  @RequirePermission(READ)
-  get(@Param('id', id) siteId: string): Promise<SiteView> {
-    return this.organization.getSite(siteId);
+  @RequirePermission(READ, { scoped: true })
+  get(@CurrentActor() actor: Actor, @Param('id', id) siteId: string): Promise<SiteView> {
+    return this.organization.getSite(actor, siteId);
   }
 
   @Post()
-  @RequirePermission(MANAGE)
+  @RequirePermission(MANAGE, { scoped: true })
   create(
     @CurrentActor() actor: Actor,
     @Body(new ZodValidationPipe(createSiteSchema)) body: CreateSiteRequest,
@@ -124,7 +127,7 @@ export class SitesController {
   }
 
   @Patch(':id')
-  @RequirePermission(MANAGE)
+  @RequirePermission(MANAGE, { scoped: true })
   update(
     @CurrentActor() actor: Actor,
     @Param('id', id) siteId: string,
@@ -135,16 +138,16 @@ export class SitesController {
 
   @Post(':id/archive')
   @HttpCode(200)
-  @RequirePermission(MANAGE)
+  @RequirePermission(MANAGE, { scoped: true })
   archive(@CurrentActor() actor: Actor, @Param('id', id) siteId: string): Promise<SiteView> {
     return this.organization.archiveSite(actor, siteId);
   }
 
   @Post(':id/restore')
   @HttpCode(200)
-  @RequirePermission(MANAGE)
-  restore(@Param('id', id) siteId: string): Promise<SiteView> {
-    return this.organization.restoreSite(siteId);
+  @RequirePermission(MANAGE, { scoped: true })
+  restore(@CurrentActor() actor: Actor, @Param('id', id) siteId: string): Promise<SiteView> {
+    return this.organization.restoreSite(actor, siteId);
   }
 }
 
@@ -155,22 +158,26 @@ export class DepartmentsController {
   constructor(private readonly organization: OrganizationService) {}
 
   @Get()
-  @RequirePermission(READ)
+  @RequirePermission(READ, { scoped: true })
   @ApiOperation({ summary: 'List departments (archived ones hidden by default)' })
   list(
+    @CurrentActor() actor: Actor,
     @Query(new ZodValidationPipe(departmentListQuerySchema)) query: DepartmentListQuery,
   ): Promise<Paginated<DepartmentView>> {
-    return this.organization.listDepartments(query);
+    return this.organization.listDepartments(actor, query);
   }
 
   @Get(':id')
-  @RequirePermission(READ)
-  get(@Param('id', id) departmentId: string): Promise<DepartmentView> {
-    return this.organization.getDepartment(departmentId);
+  @RequirePermission(READ, { scoped: true })
+  get(
+    @CurrentActor() actor: Actor,
+    @Param('id', id) departmentId: string,
+  ): Promise<DepartmentView> {
+    return this.organization.getDepartment(actor, departmentId);
   }
 
   @Post()
-  @RequirePermission(MANAGE)
+  @RequirePermission(MANAGE, { scoped: true })
   create(
     @CurrentActor() actor: Actor,
     @Body(new ZodValidationPipe(createDepartmentSchema)) body: CreateDepartmentRequest,
@@ -179,7 +186,7 @@ export class DepartmentsController {
   }
 
   @Patch(':id')
-  @RequirePermission(MANAGE)
+  @RequirePermission(MANAGE, { scoped: true })
   update(
     @CurrentActor() actor: Actor,
     @Param('id', id) departmentId: string,
@@ -190,7 +197,7 @@ export class DepartmentsController {
 
   @Post(':id/archive')
   @HttpCode(200)
-  @RequirePermission(MANAGE)
+  @RequirePermission(MANAGE, { scoped: true })
   archive(
     @CurrentActor() actor: Actor,
     @Param('id', id) departmentId: string,
@@ -200,8 +207,11 @@ export class DepartmentsController {
 
   @Post(':id/restore')
   @HttpCode(200)
-  @RequirePermission(MANAGE)
-  restore(@Param('id', id) departmentId: string): Promise<DepartmentView> {
-    return this.organization.restoreDepartment(departmentId);
+  @RequirePermission(MANAGE, { scoped: true })
+  restore(
+    @CurrentActor() actor: Actor,
+    @Param('id', id) departmentId: string,
+  ): Promise<DepartmentView> {
+    return this.organization.restoreDepartment(actor, departmentId);
   }
 }

@@ -64,3 +64,29 @@ describe('role schemas', () => {
     expect(updateRoleSchema.safeParse({ name: 'New name', version: 2 }).success).toBe(true);
   });
 });
+
+describe('assignRoleSchema', () => {
+  const roleId = '0193a000-0000-7000-8000-000000000001';
+  const scopeId = '0193a000-0000-7000-8000-000000000002';
+
+  it('defaults to the whole tenant', async () => {
+    const { assignRoleSchema } = await import('./rbac');
+    expect(assignRoleSchema.parse({ roleId })).toEqual({ roleId, scopeType: 'tenant' });
+    expect(assignRoleSchema.parse({ roleId, scopeType: 'site', scopeId })).toEqual({
+      roleId,
+      scopeType: 'site',
+      scopeId,
+    });
+  });
+
+  it.each([
+    { roleId, scopeType: 'site' },
+    { roleId, scopeType: 'tenant', scopeId },
+    { roleId, scopeType: 'project', scopeId },
+    { roleId, scopeType: 'site', scopeId: 'nope' },
+    { roleId, scopeType: 'site', scopeId, userId: scopeId },
+  ])('rejects %j', async (input) => {
+    const { assignRoleSchema } = await import('./rbac');
+    expect(assignRoleSchema.safeParse(input).success).toBe(false);
+  });
+});

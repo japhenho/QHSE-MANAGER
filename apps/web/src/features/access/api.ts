@@ -1,4 +1,5 @@
 import type {
+  AssignRoleRequest,
   AuditEventView,
   CreateRoleRequest,
   Paginated,
@@ -74,12 +75,12 @@ export function listUsers(page: number, search: string, signal?: AbortSignal) {
   });
 }
 
-export function assignRole(userId: string, roleId: string) {
-  return apiFetch(`/users/${userId}/roles/${roleId}`, { method: 'PUT' });
+export function assignRole(userId: string, body: AssignRoleRequest) {
+  return apiFetch(`/users/${userId}/role-assignments`, { method: 'POST', body });
 }
 
-export function unassignRole(userId: string, roleId: string) {
-  return apiFetch(`/users/${userId}/roles/${roleId}`, { method: 'DELETE' });
+export function unassignRole(userId: string, assignmentId: string) {
+  return apiFetch(`/users/${userId}/role-assignments/${assignmentId}`, { method: 'DELETE' });
 }
 
 export interface AuditFilters {

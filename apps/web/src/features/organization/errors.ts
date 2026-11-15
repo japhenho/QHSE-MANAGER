@@ -10,6 +10,7 @@ const REASON_LABELS = {
   has_active_children: 'organization.errors.has_active_children',
   parent_archived: 'organization.errors.parent_archived',
   archived: 'organization.errors.archived',
+  outside_scope: 'access.errors.outside_scope',
 } as const satisfies Record<OrganizationErrorReason, string>;
 
 /** Translated explanation of a failed organisation request. */
