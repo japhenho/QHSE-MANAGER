@@ -8,6 +8,7 @@ import { buildLoggerOptions } from './common/logging/logger.options.js';
 import { ENV, EnvModule, LOG_STREAM } from './config/index.js';
 import { HealthModule } from './health/health.module.js';
 import { RbacModule } from './rbac/rbac.module.js';
+import { OrganizationModule } from './organization/organization.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { TenancyModule } from './tenancy/tenancy.module.js';
 
@@ -20,6 +21,7 @@ import { TenancyModule } from './tenancy/tenancy.module.js';
     AuditModule,
     AuthModule,
     RbacModule,
+    OrganizationModule,
     HealthModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: ApiExceptionFilter }],

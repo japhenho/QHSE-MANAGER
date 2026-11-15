@@ -32,6 +32,9 @@ export const TENANT_SCOPE: Readonly<Record<Prisma.ModelName, ScopeRule>> = {
   Role: { tenantField: 'tenantId', tenantRelation: 'tenant', writable: true },
   RolePermission: { tenantField: 'tenantId', tenantRelation: 'tenant', writable: true },
   RoleAssignment: { tenantField: 'tenantId', tenantRelation: 'tenant', writable: true },
+  Company: { tenantField: 'tenantId', tenantRelation: 'tenant', writable: true },
+  Site: { tenantField: 'tenantId', tenantRelation: 'tenant', writable: true },
+  Department: { tenantField: 'tenantId', tenantRelation: 'tenant', writable: true },
   AuditEvent: {
     tenantField: 'tenantId',
     tenantRelation: 'tenant',

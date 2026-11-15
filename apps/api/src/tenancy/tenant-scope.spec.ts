@@ -202,11 +202,14 @@ describe('scopeArgs (barrier 1)', () => {
     expect(Object.keys(TENANT_SCOPE).sort()).toEqual([
       'AuditEvent',
       'AuthSession',
+      'Company',
+      'Department',
       'LoginThrottle',
       'RefreshToken',
       'Role',
       'RoleAssignment',
       'RolePermission',
+      'Site',
       'Tenant',
       'User',
     ]);

@@ -265,7 +265,7 @@ describe('tenant provisioning (decision D-13)', () => {
     expect(roles).toEqual([
       { reference_key: 'administrator', is_system: true, permissions: 0 },
       { reference_key: 'auditor', is_system: false, permissions: 1 },
-      { reference_key: 'qhse-manager', is_system: false, permissions: 3 },
+      { reference_key: 'qhse-manager', is_system: false, permissions: 4 },
     ]);
   });
 

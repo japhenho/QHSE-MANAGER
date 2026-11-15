@@ -12,6 +12,8 @@ export const PERMISSIONS = {
   ROLE_ASSIGN: 'role:assign',
   USER_READ: 'user:read',
   AUDIT_LOG_READ: 'audit-log:read',
+  ORGANIZATION_READ: 'organization:read',
+  ORGANIZATION_MANAGE: 'organization:manage',
 } as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -39,6 +41,10 @@ export const PERMISSION_GROUPS: readonly {
   },
   { resource: 'user', permissions: [PERMISSIONS.USER_READ] },
   { resource: 'audit-log', permissions: [PERMISSIONS.AUDIT_LOG_READ] },
+  {
+    resource: 'organization',
+    permissions: [PERMISSIONS.ORGANIZATION_READ, PERMISSIONS.ORGANIZATION_MANAGE],
+  },
 ];
 
 /** Stable keys of the roles installed with every tenant. */
@@ -68,9 +74,14 @@ export const REFERENCE_ROLES: readonly {
   {
     key: 'qhse-manager',
     name: 'Responsable QHSE',
-    description: 'Consulte les utilisateurs, les rôles et le journal d’audit.',
+    description: 'Consulte l’organisation, les utilisateurs, les rôles et le journal d’audit.',
     isSystem: false,
-    permissions: [PERMISSIONS.ROLE_READ, PERMISSIONS.USER_READ, PERMISSIONS.AUDIT_LOG_READ],
+    permissions: [
+      PERMISSIONS.ROLE_READ,
+      PERMISSIONS.USER_READ,
+      PERMISSIONS.AUDIT_LOG_READ,
+      PERMISSIONS.ORGANIZATION_READ,
+    ],
   },
   {
     key: 'auditor',

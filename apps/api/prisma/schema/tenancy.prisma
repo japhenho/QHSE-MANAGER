@@ -34,6 +34,9 @@ model Tenant {
   roles           Role[]
   rolePermissions RolePermission[]
   roleAssignments RoleAssignment[]
+  companies       Company[]
+  sites           Site[]
+  departments     Department[]
 
   @@map("tenants")
 }

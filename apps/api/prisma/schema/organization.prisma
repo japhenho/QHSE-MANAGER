@@ -1,0 +1,74 @@
+// Organisation domain: the legal entities of a tenant, their sites and departments.
+
+/// A legal entity of the tenant (the tenant itself, a subsidiary, a joint venture...).
+model Company {
+  id         String    @id @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  /// Short identifier chosen by the tenant, unique within it.
+  code       String
+  name       String
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  version    Int       @default(1)
+  archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
+  archivedBy String?   @map("archived_by") @db.Uuid
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  sites  Site[]
+
+  @@unique([tenantId, code])
+  @@unique([tenantId, id])
+  @@index([tenantId, name])
+  @@map("companies")
+}
+
+/// A place of operations. Carries what makes dates, money and rules local.
+model Site {
+  id           String    @id @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  companyId    String    @map("company_id") @db.Uuid
+  code         String
+  name         String
+  /// ISO 3166-1 alpha-2.
+  countryCode  String    @map("country_code") @db.Char(2)
+  /// IANA identifier, e.g. "Africa/Brazzaville". Dates are stored in UTC and shown in it.
+  timeZone     String    @map("time_zone")
+  /// ISO 4217, e.g. "XAF".
+  currencyCode String    @map("currency_code") @db.Char(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  version      Int       @default(1)
+  archivedAt   DateTime? @map("archived_at") @db.Timestamptz(3)
+  archivedBy   String?   @map("archived_by") @db.Uuid
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  /// Composite key: a site can only belong to a company of the same tenant.
+  company     Company      @relation(fields: [tenantId, companyId], references: [tenantId, id], onDelete: Restrict)
+  departments Department[]
+
+  @@unique([tenantId, code])
+  @@unique([tenantId, id])
+  @@index([tenantId, companyId])
+  @@index([tenantId, name])
+  @@map("sites")
+}
+
+model Department {
+  id         String    @id @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  siteId     String    @map("site_id") @db.Uuid
+  name       String
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  version    Int       @default(1)
+  archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
+  archivedBy String?   @map("archived_by") @db.Uuid
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  /// Composite key: a department can only belong to a site of the same tenant.
+  site   Site   @relation(fields: [tenantId, siteId], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, siteId, name])
+  @@unique([tenantId, id])
+  @@map("departments")
+}

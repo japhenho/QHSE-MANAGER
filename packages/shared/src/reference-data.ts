@@ -1,0 +1,45 @@
+/**
+ * Reference lists used to validate what describes a site: country, time zone, currency.
+ * Countries are the ISO 3166-1 alpha-2 codes; time zones and currencies come from the
+ * runtime's own tables (IANA and ISO 4217), so they follow the platform's updates.
+ * Display names are produced by `Intl.DisplayNames` in the user's language.
+ */
+export const COUNTRY_CODES: readonly string[] = (
+  'AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS ' +
+  'BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE ' +
+  'EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM ' +
+  'HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC ' +
+  'LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA ' +
+  'NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW ' +
+  'SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO ' +
+  'TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW'
+).split(' ');
+
+const COUNTRY_SET: ReadonlySet<string> = new Set(COUNTRY_CODES);
+
+export function isCountryCode(value: unknown): value is string {
+  return typeof value === 'string' && COUNTRY_SET.has(value);
+}
+
+let timeZones: ReadonlySet<string> | undefined;
+let currencies: ReadonlySet<string> | undefined;
+
+/** IANA time zone identifiers known to the runtime, plus `UTC`. */
+export function listTimeZones(): readonly string[] {
+  return [...new Set(['UTC', ...Intl.supportedValuesOf('timeZone')])];
+}
+
+export function isTimeZone(value: unknown): value is string {
+  timeZones ??= new Set(listTimeZones());
+  return typeof value === 'string' && timeZones.has(value);
+}
+
+/** ISO 4217 currency codes known to the runtime. */
+export function listCurrencies(): readonly string[] {
+  return Intl.supportedValuesOf('currency');
+}
+
+export function isCurrencyCode(value: unknown): value is string {
+  currencies ??= new Set(listCurrencies());
+  return typeof value === 'string' && currencies.has(value);
+}
