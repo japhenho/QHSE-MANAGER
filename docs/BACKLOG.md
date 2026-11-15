@@ -38,7 +38,7 @@ Chaque lot doit satisfaire, en plus de ses critères propres :
 | P1-03 | Journal d'audit en ajout seul                                     | P1-02            | D-06 (purge seulement)      | SEQ | Livré         |
 | P1-04 | Authentification : connexion, rafraîchissement, déconnexion       | P1-03            | D-12                        | SEQ | Livré         |
 | P1-05 | RBAC : rôles, permissions, refus par défaut, harnais de tests     | P1-04            | D-05 (contenu des rôles)    | SEQ | Livré         |
-| P1-06 | Structure organisationnelle : entreprises, sites, départements    | P1-05            | —                           | A   | À faire       |
+| P1-06 | Structure organisationnelle : entreprises, sites, départements    | P1-05            | —                           | A   | Livré         |
 | P1-07 | Périmètres d'accès (entreprise, site, département)                | P1-06            | D-05                        | A   | À faire       |
 | P1-08 | Gestion des utilisateurs : invitation, activation, mot de passe   | P1-05            | D-03 (production seulement) | B   | À faire       |
 | P1-09 | MFA pour les comptes privilégiés                                  | P1-08            | D-09                        | B   | Bloqué (D-09) |
@@ -159,14 +159,15 @@ Chaque lot doit satisfaire, en plus de ses critères propres :
 - **Dépendances.** P1-05.
 - **Contenu.** Tables `companies`, `sites`, `departments` ; endpoints de création, lecture, liste (pagination, filtres, tri), modification et archivage logique pour chacune ; écrans web liste + formulaire. Un site porte un pays, un fuseau horaire IANA et une devise. Aucune notion de projet ni de contrat dans ce lot (voir « Points à clarifier »).
 - **Critères d'acceptation.**
-  - [ ] Fuseau horaire, pays et devise validés contre des listes de référence (valeur inconnue : `400 VALIDATION_FAILED`).
-  - [ ] Archivage logique : une entité archivée disparaît des listes par défaut, reste consultable par filtre ; aucune suppression physique n'est exposée.
-  - [ ] Un département ne peut être rattaché qu'à un site du même tenant (refus prouvé au niveau de l'API **et** de la base).
-  - [ ] Unicité du code d'entreprise et de site **par tenant** : le même code peut exister dans deux tenants.
-  - [ ] Listes : taille de page supérieure à la limite refusée ; tri et filtres couverts par des tests.
-  - [ ] Création, modification et archivage tracés (CC-3).
-  - [ ] **CC-1 et CC-2** pour chacun des endpoints des trois ressources.
-  - [ ] Écrans FR/EN, états vide/chargement/erreur, avertissement avant perte de saisie (CC-4) ; CC-5, CC-6, CC-7.
+  - [x] Fuseau horaire, pays et devise validés contre des listes de référence (valeur inconnue : `400 VALIDATION_FAILED`).
+  - [x] Archivage logique : une entité archivée disparaît des listes par défaut, reste consultable par filtre ; aucune suppression physique n'est exposée.
+  - [x] Un département ne peut être rattaché qu'à un site du même tenant (refus prouvé au niveau de l'API **et** de la base).
+  - [x] Unicité du code d'entreprise et de site **par tenant** : le même code peut exister dans deux tenants.
+  - [x] Listes : taille de page supérieure à la limite refusée ; tri et filtres couverts par des tests.
+  - [x] Création, modification et archivage tracés (CC-3).
+  - [x] **CC-1 et CC-2** pour chacun des endpoints des trois ressources.
+  - [x] Écrans FR/EN, états vide/chargement/erreur, avertissement avant perte de saisie (CC-4) ; CC-5, CC-6, CC-7.
+- **Livré le 2026-11-15.** Choix faits : une entreprise porte les sites, un site porte les départements ; le rattachement est fixé à la création (un site ne change pas d'entreprise) ; un parent ne s'archive pas tant qu'il a des enfants actifs ; une fiche archivée est en lecture seule jusqu'à sa restauration. L'ordre de tri des textes dépend de la collation du serveur PostgreSQL (dette : fixer une collation insensible à la casse avant le pilote).
 
 ### P1-07 — Périmètres d'accès (entreprise, site, département)
 

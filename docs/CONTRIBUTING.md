@@ -70,4 +70,5 @@ Pour simuler le temps (expiration, verrouillage) : `FakeClock`, passé à `creat
 2. Entrée de menu dans `NAV_ITEMS` (`navigation.ts`) avec sa `permission`.
 3. Textes dans `i18n/locales/fr.ts` **et** `en.ts` ; aucun texte en dur.
 4. États de chargement, d'erreur et vide (composant `ListStates` pour les listes).
-5. Tests avec `renderApp(chemin, { status: 'authenticated', identity: identityWith([...]) })`.
+5. Formulaire : validation avec le schéma partagé avant l'appel, envoi de la `version` lue, et `useUnsavedChangesWarning(dirty)` pour avertir avant une perte de saisie (appeler `allowNextNavigation()` juste avant la redirection qui suit un enregistrement réussi).
+6. Tests avec `renderApp(chemin, { status: 'authenticated', identity: identityWith([...]) })`.

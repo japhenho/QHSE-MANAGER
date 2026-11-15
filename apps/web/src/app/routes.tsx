@@ -1,7 +1,7 @@
 import { PERMISSIONS } from '@qhse/shared';
 import type { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { RouteObject } from 'react-router-dom';
+import { Navigate, type RouteObject } from 'react-router-dom';
 import { LoadingState } from '../components/ui';
 import { AppShell } from './AppShell';
 import { RequireAuth } from './RequireAuth';
@@ -23,6 +23,15 @@ function lazyPage(load: () => Promise<{ default: ComponentType }>) {
     lazy: async () => ({ Component: (await load()).default }),
     HydrateFallback: PageLoading,
   } satisfies Partial<RouteObject>;
+}
+
+type OrganizationPages = typeof import('../features/organization/pages');
+
+/** A page of the organisation module, loaded with the module on first visit. */
+function organizationPage(name: keyof OrganizationPages) {
+  return lazyPage(async () => ({
+    default: (await import('../features/organization/pages'))[name],
+  }));
 }
 
 /** Route table shared by the browser router and the tests (memory router). */
@@ -50,6 +59,29 @@ export const routes: RouteObject[] = [
               {
                 path: ROUTES.systemStatus,
                 ...lazyPage(() => import('../features/system-status/SystemStatusPage')),
+              },
+              {
+                element: <RequirePermission permission={PERMISSIONS.ORGANIZATION_READ} />,
+                children: [
+                  {
+                    path: ROUTES.organization,
+                    element: <Navigate to={ROUTES.companies} replace />,
+                  },
+                  { path: ROUTES.companies, ...organizationPage('CompaniesPage') },
+                  { path: ROUTES.company, ...organizationPage('CompanyFormPage') },
+                  { path: ROUTES.sites, ...organizationPage('SitesPage') },
+                  { path: ROUTES.site, ...organizationPage('SiteFormPage') },
+                  { path: ROUTES.departments, ...organizationPage('DepartmentsPage') },
+                  { path: ROUTES.department, ...organizationPage('DepartmentFormPage') },
+                ],
+              },
+              {
+                element: <RequirePermission permission={PERMISSIONS.ORGANIZATION_MANAGE} />,
+                children: [
+                  { path: ROUTES.companyNew, ...organizationPage('CompanyFormPage') },
+                  { path: ROUTES.siteNew, ...organizationPage('SiteFormPage') },
+                  { path: ROUTES.departmentNew, ...organizationPage('DepartmentFormPage') },
+                ],
               },
               {
                 element: <RequirePermission permission={PERMISSIONS.ROLE_READ} />,

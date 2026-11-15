@@ -128,3 +128,10 @@ export const ScrollIcon = createIcon(
     <path d="M9 8h6M9 12h6" />
   </>,
 );
+
+export const BuildingIcon = createIcon(
+  <>
+    <path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16M15 9h3a2 2 0 0 1 2 2v10M2 21h20" />
+    <path d="M8 7h3M8 11h3M8 15h3" />
+  </>,
+);

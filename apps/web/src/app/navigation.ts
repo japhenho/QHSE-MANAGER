@@ -1,6 +1,7 @@
 import { PERMISSIONS, type PermissionKey } from '@qhse/shared';
 import {
   ActivityIcon,
+  BuildingIcon,
   HomeIcon,
   type IconComponent,
   KeyIcon,
@@ -17,6 +18,16 @@ export const ROUTES = {
   home: '/',
   login: '/login',
   systemStatus: '/system-status',
+  organization: '/organization',
+  companies: '/organization/companies',
+  companyNew: '/organization/companies/new',
+  company: '/organization/companies/:id',
+  sites: '/organization/sites',
+  siteNew: '/organization/sites/new',
+  site: '/organization/sites/:id',
+  departments: '/organization/departments',
+  departmentNew: '/organization/departments/new',
+  department: '/organization/departments/:id',
   roles: '/roles',
   roleNew: '/roles/new',
   role: '/roles/:id',
@@ -32,10 +43,7 @@ type NavLabelKey = `nav.${Exclude<keyof Translation['nav'], 'label' | 'openMenu'
 export interface NavItem {
   /** Stable identifier (analytics, tests, future permission checks). */
   readonly id: string;
-  readonly path: Exclude<
-    RoutePath,
-    typeof ROUTES.login | typeof ROUTES.role | typeof ROUTES.roleNew
-  >;
+  readonly path: RoutePath;
   /** Translation key of the label — never a literal string. */
   readonly labelKey: NavLabelKey;
   readonly icon: IconComponent;
@@ -67,6 +75,13 @@ export const NAV_ITEMS: readonly NavItem[] = [
     path: ROUTES.systemStatus,
     labelKey: 'nav.systemStatus',
     icon: ActivityIcon,
+  },
+  {
+    id: 'organization',
+    path: ROUTES.organization,
+    labelKey: 'nav.organization',
+    icon: BuildingIcon,
+    permission: PERMISSIONS.ORGANIZATION_READ,
   },
   {
     id: 'roles',

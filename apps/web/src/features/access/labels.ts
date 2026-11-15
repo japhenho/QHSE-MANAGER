@@ -10,12 +10,15 @@ export const PERMISSION_LABELS = {
   'role:assign': 'access.permissions.role_assign',
   'user:read': 'access.permissions.user_read',
   'audit-log:read': 'access.permissions.audit_log_read',
+  'organization:read': 'access.permissions.organization_read',
+  'organization:manage': 'access.permissions.organization_manage',
 } as const satisfies Record<PermissionKey, string>;
 
 export const GROUP_LABELS = {
   role: 'access.groups.role',
   user: 'access.groups.user',
   'audit-log': 'access.groups.audit_log',
+  organization: 'access.groups.organization',
 } as const;
 
 const REFERENCE_ROLE_LABELS = {

@@ -1,6 +1,6 @@
 # Rôles et permissions — QHSE MANAGER
 
-État au lot P1-05. Ce document décrit ce qui est **réellement implémenté** ; il est mis à jour par chaque lot qui ajoute une permission.
+État au lot P1-06. Ce document décrit ce qui est **réellement implémenté** ; il est mis à jour par chaque lot qui ajoute une permission.
 
 ## Principes
 
@@ -48,6 +48,10 @@ Vérifiées par `apps/api/test/rbac.e2e-spec.ts`.
 7. Rôles et utilisateurs de deux entreprises différentes ne peuvent pas être combinés : la réponse est celle d'un élément inexistant (`404`).
 
 Tout changement de droits est inscrit au journal d'audit : `role.created`, `role.updated`, `role.deleted`, `role.assigned`, `role.unassigned`. La consultation du journal l'est aussi (`audit_log.viewed`, une fois par consultation).
+
+## Rôles de référence et entreprises déjà créées
+
+Les rôles de référence sont installés à la création d'une entreprise. Une permission ajoutée ensuite à un rôle de référence (ici `organization:read` pour le Responsable QHSE) ne s'applique qu'aux entreprises créées après ; pour les autres, l'administrateur l'ajoute au rôle depuis l'écran Rôles. L'Administrateur, lui, détient toujours tout le catalogue.
 
 ## Portée
 
