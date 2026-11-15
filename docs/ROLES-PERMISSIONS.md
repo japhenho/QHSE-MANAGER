@@ -1,6 +1,6 @@
 # Rôles et permissions — QHSE MANAGER
 
-État au lot P1-06. Ce document décrit ce qui est **réellement implémenté** ; il est mis à jour par chaque lot qui ajoute une permission.
+État au lot P1-07. Ce document décrit ce qui est **réellement implémenté** ; il est mis à jour par chaque lot qui ajoute une permission.
 
 ## Principes
 
@@ -53,9 +53,32 @@ Tout changement de droits est inscrit au journal d'audit : `role.created`, `role
 
 Les rôles de référence sont installés à la création d'une entreprise. Une permission ajoutée ensuite à un rôle de référence (ici `organization:read` pour le Responsable QHSE) ne s'applique qu'aux entreprises créées après ; pour les autres, l'administrateur l'ajoute au rôle depuis l'écran Rôles. L'Administrateur, lui, détient toujours tout le catalogue.
 
-## Portée
+## Périmètres (lot P1-07, ADR 0007)
 
-À ce stade un rôle s'applique à **toute l'entreprise**. Les périmètres plus fins (site, département, projet, contrat) arrivent avec le lot P1-07.
+Un rôle s'attribue sur un périmètre : **toute l'organisation, une entreprise, un site ou un département**. Plusieurs attributions se cumulent.
+
+| Périmètre de l'attribution | Ce qu'il couvre                             |
+| -------------------------- | ------------------------------------------- |
+| Toute l'organisation       | Tout                                        |
+| Une entreprise             | L'entreprise, ses sites, leurs départements |
+| Un site                    | Le site et ses départements                 |
+| Un département             | Ce département seulement                    |
+
+Un périmètre ne donne jamais accès à ce qui le contient. Ce qui est hors périmètre est invisible : absent des listes, et `404` en accès direct.
+
+| Permission                                                | Peut être limitée à un périmètre ?                                   |
+| --------------------------------------------------------- | -------------------------------------------------------------------- |
+| `organization:read`, `organization:manage`                | Oui. Créer une entreprise demande le droit sur toute l'organisation. |
+| `role:assign`                                             | Oui : on n'attribue des rôles que dans son propre périmètre.         |
+| `role:read`, `role:manage`, `user:read`, `audit-log:read` | Non : elles n'ont d'effet qu'attribuées sur toute l'organisation.    |
+
+Routes d'attribution : `POST /users/:userId/role-assignments` (`{ roleId, scopeType, scopeId }`) et `DELETE /users/:userId/role-assignments/:assignmentId`.
+
+Règles supplémentaires :
+
+- on n'attribue un rôle que si l'on détient **sur ce périmètre** toutes ses permissions ;
+- le rôle Administrateur attribué sur un site donne tous les droits **limitables** sur ce site, pas l'administration de l'organisation ;
+- `GET /auth/me` distingue `permissions` (sur toute l'organisation) et `permissionsAnywhere` (sur au moins un périmètre).
 
 ## Séparation des tâches
 

@@ -17,7 +17,7 @@ Commits au format Conventional Commits, en anglais. Un lot ne se termine que si 
 ## Ajouter un endpoint
 
 1. **Schémas d'entrée** dans `packages/shared` (zod), utilisés par l'API (`ZodValidationPipe`) et par le web.
-2. **Permission** : `@RequirePermission(PERMISSIONS.X)` sur la route. Sans déclaration, la route répond `403`.
+2. **Permission** : `@RequirePermission(PERMISSIONS.X)` sur la route. Sans déclaration, la route répond `403`. Par défaut la permission est exigée sur toute l'organisation. Pour une ressource située dans l'organisation (rattachée à un site, un département…), déclarer `@RequirePermission(PERMISSIONS.X, { scoped: true })` **et** filtrer chaque lecture et chaque écriture avec `actor.scopeOf(PERMISSIONS.X)` (`AccessScope` : `siteFilter()`, `coversSite(...)`, etc. — ADR 0007).
 3. **Accès aux données** : uniquement `TenantDatabase.run(...)`. Le tenant vient de la session ; ne jamais le lire dans la requête.
 4. **Audit** : toute action sensible appelle `AuditService.record(tx, …)` dans la même unité de travail.
 5. **Tests obligatoires** (critères CC-1 et CC-2), avec le harnais ci-dessous.
@@ -52,6 +52,27 @@ await expectInvisibleAcrossTenants(
 
 // CC-1, liste : aucun identifiant de A, et un total qui ne les compte pas
 await expectListExcludes(app, '/api/v1/choses', jetonAdminB, [idDeA]);
+```
+
+Pour une route `scoped`, ajouter les **tests de périmètre** (même tenant, autre site) :
+
+```ts
+const chefS1 = await addUser(owner, adminA, 'chef-s1', {
+  permissions: [PERMISSIONS.X_READ],
+  scope: { type: 'site', id: siteS1 },
+});
+// fiche d'un autre site : même réponse que pour un identifiant inexistant
+await expectInvisibleOutsideScope(
+  app,
+  { method: 'get', url: `/api/v1/choses/${idDansS2}` },
+  `/api/v1/choses/${uuidv7()}`,
+  jetonChefS1,
+);
+// liste : seulement ce que le périmètre couvre
+await expectListLimitedToScope(app, '/api/v1/choses', jetonChefS1, {
+  visibleIds: [idDansS1],
+  hiddenIds: [idDansS2],
+});
 ```
 
 Le test générique de `rbac.e2e-spec.ts` (« deny by default ») parcourt toutes les routes : une route ajoutée sans permission le fait échouer. Une route publique ou ouverte à tout utilisateur connecté doit être ajoutée explicitement à sa liste, ce qui en fait une décision visible en revue.

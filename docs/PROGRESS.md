@@ -4,7 +4,7 @@ Mis à jour à chaque itération. Dernière mise à jour : 2026-11-13.
 
 ## Phase en cours
 
-**Phase 1 — Fondations.** Lots P1-01 à P1-06 livrés.
+**Phase 1 — Fondations.** Lots P1-01 à P1-07 livrés.
 
 ## Livré et vérifié
 
@@ -19,19 +19,20 @@ Mis à jour à chaque itération. Dernière mise à jour : 2026-11-13.
 - **P1-04** : authentification (code d'organisation + e-mail + mot de passe Argon2id), jeton d'accès court, jeton de rafraîchissement rotatif en cookie `HttpOnly` avec détection de réutilisation, verrouillage progressif, limitation de débit, garde global (refus par défaut) qui établit le contexte tenant depuis la session, commande `user:create`, écran de connexion web FR/EN. D-12 tranchée, ADR 0003 accepté.
 - **P1-05** : contrôle d'accès par rôles (catalogue de permissions dans le code, rôles composés par chaque entreprise, refus par défaut, évaluation à chaque requête, règles contre l'élévation de privilèges, dernier administrateur protégé), consultation du journal d'audit, écrans web Rôles / Utilisateurs / Journal d'audit, harnais de tests CC-1/CC-2. D-05 tranchée.
 - **P1-06** : entreprises, sites (pays, fuseau horaire IANA, devise, validés contre des listes de référence) et départements ; archivage logique sans suppression physique ; écrans web liste + formulaire avec recherche, tri, filtres et avertissement avant perte de saisie.
-- Cadrage : `docs/BACKLOG.md` (Phases 1 et 2 détaillées), `docs/DECISIONS-OUVERTES.md` (D-01 à D-13), ADR 0001 à 0006, maquettes dans `docs/maquettes/`.
+- **P1-07** : périmètres d'accès — un rôle s'attribue sur toute l'organisation, une entreprise, un site ou un département ; filtrage centralisé (`AccessScope`), hors périmètre = introuvable ; attribution limitée au périmètre de celui qui attribue ; choix du périmètre dans l'écran Utilisateurs (ADR 0007).
+- Cadrage : `docs/BACKLOG.md` (Phases 1 et 2 détaillées), `docs/DECISIONS-OUVERTES.md` (D-01 à D-13), ADR 0001 à 0007, maquettes dans `docs/maquettes/`.
 
 Preuves du 2026-11-13 (commandes lancées à la racine) :
 
-| Commande                              | Résultat                                                                                                                                                                                                               |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm build`                          | OK                                                                                                                                                                                                                     |
-| `pnpm lint`                           | OK                                                                                                                                                                                                                     |
-| `pnpm typecheck`                      | OK                                                                                                                                                                                                                     |
-| `pnpm test`                           | OK — shared 32, API 179, web 126                                                                                                                                                                                       |
-| `pnpm test:e2e` (PostgreSQL 16 local) | OK — 203 (dont organisation 38, contrôle d'accès 29, authentification 36)                                                                                                                                              |
-| `pnpm format:check`                   | OK                                                                                                                                                                                                                     |
-| Parcours réel dans un navigateur      | OK — création d'une entreprise, d'un site (Congo-Brazzaville, Africa/Brazzaville, XAF) et d'un département ; avertissement avant perte de saisie ; archivage refusé tant qu'un département est actif ; journal d'audit |
+| Commande                              | Résultat                                                                                                                                                 |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm build`                          | OK                                                                                                                                                       |
+| `pnpm lint`                           | OK                                                                                                                                                       |
+| `pnpm typecheck`                      | OK                                                                                                                                                       |
+| `pnpm test`                           | OK — shared 38, API 187, web 131                                                                                                                         |
+| `pnpm test:e2e` (PostgreSQL 16 local) | OK — 224 (dont périmètres 21, organisation 38, contrôle d'accès 29, authentification 36)                                                                 |
+| `pnpm format:check`                   | OK                                                                                                                                                       |
+| Parcours réel dans un navigateur      | OK — rôle « Chef de site » attribué sur un seul site ; son titulaire ne voit que ce site, y crée un département, ne voit ni les entreprises ni les rôles |
 
 ## Non vérifié
 
@@ -51,4 +52,4 @@ Validation du cadrage, et en priorité les décisions à trancher **avant la Pha
 
 ## Prochain lot
 
-**P1-07 — Périmètres d'accès (entreprise, site, département)** : un rôle attribué pour un site donné plutôt que pour toute l'entreprise. Le contenu dépend en partie de D-05 (déjà tranchée). Pistes B (utilisateurs) et C (fichiers) toujours ouvertes.
+La piste A continue avec **P1-10** (paramètres régionaux : affichage des dates dans le fuseau du site, devise) puis **P1-12** (idempotence des écritures). Pistes encore ouvertes : **B** — P1-08 (invitation, activation, mot de passe), puis P1-09 (MFA, bloqué par D-09) ; **C** — P1-13 (fichiers). Voir `docs/BACKLOG.md`.

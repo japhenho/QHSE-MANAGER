@@ -39,7 +39,7 @@ Chaque lot doit satisfaire, en plus de ses critères propres :
 | P1-04 | Authentification : connexion, rafraîchissement, déconnexion       | P1-03            | D-12                        | SEQ | Livré         |
 | P1-05 | RBAC : rôles, permissions, refus par défaut, harnais de tests     | P1-04            | D-05 (contenu des rôles)    | SEQ | Livré         |
 | P1-06 | Structure organisationnelle : entreprises, sites, départements    | P1-05            | —                           | A   | Livré         |
-| P1-07 | Périmètres d'accès (entreprise, site, département)                | P1-06            | D-05                        | A   | À faire       |
+| P1-07 | Périmètres d'accès (entreprise, site, département)                | P1-06            | D-05                        | A   | Livré         |
 | P1-08 | Gestion des utilisateurs : invitation, activation, mot de passe   | P1-05            | D-03 (production seulement) | B   | À faire       |
 | P1-09 | MFA pour les comptes privilégiés                                  | P1-08            | D-09                        | B   | Bloqué (D-09) |
 | P1-10 | i18n FR/EN et paramètres régionaux                                | P1-06            | —                           | A   | À faire       |
@@ -175,14 +175,15 @@ Chaque lot doit satisfaire, en plus de ses critères propres :
 - **Dépendances.** P1-06. Décision : D-05.
 - **Contenu.** L'attribution de rôle porte un type de périmètre (`tenant`, `company`, `site`, `department`) et l'identifiant correspondant ; le type est extensible à `project` et `contract`, **sans** créer ces entités maintenant ; résolution centralisée des périmètres effectifs (un périmètre « entreprise » couvre ses sites, un périmètre « site » ses départements) ; filtre de périmètre appliqué de façon centralisée, comme le filtre tenant ; application aux endpoints de P1-06 ; écran d'attribution avec choix du périmètre.
 - **Critères d'acceptation.**
-  - [ ] Un utilisateur dont le rôle porte sur le site S1 ne lit, ne liste et ne modifie aucun département de S2 du **même tenant** : `404` en accès direct, absence dans les listes.
-  - [ ] Héritage : un périmètre « entreprise » donne accès à tous ses sites et à leurs départements ; un périmètre « tenant » à tout.
-  - [ ] Cumul : deux attributions sur deux sites donnent l'union des périmètres, pas l'intersection.
-  - [ ] Attribuer un rôle sur un périmètre d'un autre tenant est refusé (`404`).
-  - [ ] Un utilisateur ne peut attribuer un rôle que dans les limites de son propre périmètre.
-  - [ ] Le retrait d'une attribution prend effet à la requête suivante ; tout changement est tracé (CC-3).
-  - [ ] Le harnais de P1-05 est étendu par un **test de périmètre** réutilisable par les lots métier ; CC-1 et CC-2 restent verts sur les endpoints de P1-05 et P1-06.
-  - [ ] `docs/ROLES-PERMISSIONS.md` mis à jour ; CC-4, CC-5, CC-6, CC-7.
+  - [x] Un utilisateur dont le rôle porte sur le site S1 ne lit, ne liste et ne modifie aucun département de S2 du **même tenant** : `404` en accès direct, absence dans les listes.
+  - [x] Héritage : un périmètre « entreprise » donne accès à tous ses sites et à leurs départements ; un périmètre « tenant » à tout.
+  - [x] Cumul : deux attributions sur deux sites donnent l'union des périmètres, pas l'intersection.
+  - [x] Attribuer un rôle sur un périmètre d'un autre tenant est refusé (`404`).
+  - [x] Un utilisateur ne peut attribuer un rôle que dans les limites de son propre périmètre.
+  - [x] Le retrait d'une attribution prend effet à la requête suivante ; tout changement est tracé (CC-3).
+  - [x] Le harnais de P1-05 est étendu par un **test de périmètre** réutilisable par les lots métier ; CC-1 et CC-2 restent verts sur les endpoints de P1-05 et P1-06.
+  - [x] `docs/ROLES-PERMISSIONS.md` mis à jour ; CC-4, CC-5, CC-6, CC-7.
+- **Livré le 2026-11-15** (ADR 0007). Les routes d'attribution ont changé : `POST /users/:id/role-assignments` et `DELETE /users/:id/role-assignments/:assignmentId`. Limites : la liste des utilisateurs reste réservée au droit sur tout le tenant ; les listes de choix du web sont plafonnées à 100 éléments.
 
 ### P1-08 — Gestion des utilisateurs : invitation, activation, désactivation, mot de passe
 
